@@ -25,7 +25,7 @@ type
 
     m_strMxPri: string;
 
-  public
+	public
 
     constructor Create(
     );
@@ -37,7 +37,7 @@ type
       const p_xe: c_XmlElement
     );
 
-    procedure Save(
+		procedure Save(
       const p_xe: c_XmlElement
     );
 
@@ -76,7 +76,7 @@ type
 
     m_strIpAddress: string;
 
-    m_acc: c_Account;
+		m_acc: c_Account;
 
 //    m_olHost: TObjectList;
 
@@ -103,7 +103,7 @@ type
     );
 
     procedure EnableTimer(
-    );
+		);
 
     procedure DisableTimer(
     );
@@ -115,7 +115,7 @@ type
 
     procedure m_csCheckIpAddressRead(
       p_objSender: TObject;
-      p_sck: TCustomWinSocket
+			p_sck: TCustomWinSocket
     );
 
     procedure m_csCheckIpAddressDisconnect(
@@ -142,7 +142,7 @@ type
 
     procedure m_csUpdateIpAddressDisconnect(
       p_objSender: TObject;
-      p_sck: TCustomWinSocket
+			p_sck: TCustomWinSocket
     );
 
     procedure m_csUpdateIpAddressError(
@@ -154,7 +154,7 @@ type
 
     procedure m_ssClientError(
       p_objSender: TObject;
-      p_cws: TCustomWinSocket;
+			p_cws: TCustomWinSocket;
       p_ee: TErrorEvent;
       var p_nErrorCode: integer
     );
@@ -181,7 +181,7 @@ type
   public
     function GetServiceController: TServiceController; override;
     { Public declarations }
-  end;
+	end;
 
   c_Host = class(TObject)
   private
@@ -193,32 +193,36 @@ type
     m_strResultCode: string; // last reply status
 
 
-  public
+	public
 
-    procedure Load(
-      const p_xe: c_XmlElement
-    );
+		procedure Load(
+			const p_xe: c_XmlElement
+		);
 
-    procedure Save(
-      const p_xe: c_XmlElement
-    );
+		procedure Save(
+			const p_xe: c_XmlElement
+		);
 
-  end;
+	end;
 
 var
-  IpRightService: TIpRightService;
+	IpRightService: TIpRightService;
 
 implementation
 
 {$R *.DFM}
 
 uses
-  FileCtrl,
-  UtilityUnit;
+	FileCtrl,
+	UtilityUnit;
 
 const
-  LOG_FILENAME = 'IpRight.log';
-  XML_FILENAME = 'IpRight.xml';
+	LOG_FILENAME = 'IpRight.log';
+	XML_FILENAME = 'IpRight.xml';
+	CLIENT_VERSION = '0.9.5';
+	CLIENT_COMPANY = 'Independent Rapid Development Limited';
+	CLIENT_EMAIL = 'stacey.richards@ird.co.nz';
+	CONFIG_PORT = 54321;
 
 procedure ServiceController(CtrlCode: DWord); stdcall;
 begin
@@ -228,9 +232,9 @@ end;
 procedure TIpRightService.CheckIpAddress(
 );
 begin
-  LogMethod('Checking IP address.');
+	LogMethod('Checking IP address.');
 
-  if ('1' <> m_strCheckIp) then begin
+	if ('1' <> m_strCheckIp) then begin
     Log('Checking is disabled.');
     exit;
   end;
@@ -294,7 +298,7 @@ begin
         l_b := true;
         l_j := 0;
         ZeroMemory(@l_an, sizeof(l_an));
-      end;
+			end;
       l_an[l_j] := l_an[l_j] * 10 + byte(p_str[l_i]) - ord('0');
       if (l_an[l_j] > 255) then begin
         l_b := false;
@@ -333,7 +337,7 @@ procedure TIpRightService.Load(
 );
 var
   l_xeRoot: c_XmlElement;
-  l_fs: TFileStream;
+	l_fs: TFileStream;
   l_i: integer;
   l_xe: c_XmlElement;
 begin
@@ -411,7 +415,7 @@ begin
     l_fs.Position := l_fs.Size;
     p_str := FormatDateTime('yyyy-mm-dd hh:nn:ss', Now()) + ' ' + p_str +
       #$D#$A;
-    l_fs.WriteBuffer(pchar(p_str)^, length(p_str));
+		l_fs.WriteBuffer(pchar(p_str)^, length(p_str));
   finally
     FreeAndNil(l_fs);
   end;
@@ -450,7 +454,7 @@ begin
     try
       l_slExcludeIpAddress.CommaText := m_strCheckIpExcludeIpAddresses;
       for l_i := l_sl.Count - 1 downto 0 do begin
-        if (- 1 <> l_slExcludeIpAddress.IndexOf(l_sl.Strings[l_i])) then begin
+				if (- 1 <> l_slExcludeIpAddress.IndexOf(l_sl.Strings[l_i])) then begin
           l_sl.Delete(0);
         end;
       end;
@@ -489,7 +493,7 @@ begin
       l_strHostNames := l_strHostNames + l_hst.m_strName;
     end;
   end;
-  if ('' <> l_strHostNames) then begin
+	if ('' <> l_strHostNames) then begin
     m_strIpAddress := l_str;
     m_strHostNames := l_strHostNames;
     Log('Out of date hosts: ' + m_strHostNames);
@@ -528,7 +532,7 @@ begin
   if (('' <> m_strCheckIpUsername) or ('' <> m_strCheckIpPassword)) then begin
     l_strUsernamePassword := StringToBase64(m_strCheckIpUsername + ':' +
          m_strCheckIpPassword);
-  end else begin
+	end else begin
     l_strUsernamePassword := '';
   end;
 
@@ -567,7 +571,7 @@ begin
   LogMethod('Update IP address socket disconnected.');
   // see if we get an ok response for each of the host names.
   l_sl := TStringList.Create();
-  try
+	try
     l_sl.Text := m_strUpdateIpReply;
     // remove header.
     while (l_sl.Count > 0) and ('' <> l_sl.Strings[0]) do begin
@@ -606,7 +610,7 @@ begin
           Log('Update IP address for ' + l_hst.m_strName + ' changed from "' +
               l_hst.m_strIpAddress + '" to "' + l_str + '".');
           l_hst.m_strIpAddress := l_str;
-          l_hst.m_strUpdated := FormatDateTime('', Now());
+					l_hst.m_strUpdated := FormatDateTime('', Now());
         end else if ('nochange' = l_strResultCode) then begin // No changes were made to the hostname(s). Continual updates with no changes will lead to blocked clients.
           Log('No changes were made to the hostname(s). Continual updates with no changes will lead to blocked clients.');
           // if nochange save change - ip must have been corrected externally.
@@ -645,7 +649,7 @@ begin
       end;
     end;
     if (l_bSave) then begin
-      Save();
+			Save();
     end;
   finally
     FreeAndNil(l_sl);
@@ -684,7 +688,7 @@ begin
   // Task 51.
 
   if ('1' = m_acc.m_strMx) then begin
-    l_strMxMxPri := '&mx=ON&mxpri=' + IntToStr(StrToIntDef(m_acc.m_strMxPri,
+		l_strMxMxPri := '&mx=ON&mxpri=' + IntToStr(StrToIntDef(m_acc.m_strMxPri,
         0));
   end else begin
     l_strMxMxPri := '';
@@ -692,10 +696,10 @@ begin
 
   l_str := 'GET /visitors/update.html?hostname=' + m_strHostNames +
       '&myip=' + m_strIpAddress + l_strMxMxPri + ' HTTP/1.0'#$D#$A'Host: ' +
-      m_acc.m_strServer + #$D#$A'Authorization: Basic ' +
-      l_strUsernamePassword + #$D#$A +
-      'User-Agent: IP Right/0.92 stacey@rightsoftware.co.nz'#$D#$A;
-  if ('1' = m_strLogUpdate) then begin
+			m_acc.m_strServer + #$D#$A'Authorization: Basic ' +
+			l_strUsernamePassword + #$D#$A +
+			'User-Agent: IP Right/' + CLIENT_VERSION + ' ' + CLIENT_EMAIL + #$D#$A;
+	if ('1' = m_strLogUpdate) then begin
     Log('Writing: ' + l_str);
   end;
   p_sck.SendText(l_str + #$D#$A);
@@ -723,7 +727,7 @@ begin
   l_xeRoot := c_XMLElement.Create('IpRight');
   try
     l_xe := l_xeRoot.AddElement('Log');
-    l_xe.SetAttribute('Enabled', m_strLog);
+		l_xe.SetAttribute('Enabled', m_strLog);
     l_xe.SetAttribute('Methods', m_strLogMethod);
     l_xe.SetAttribute('Options', m_strLogOption);
     l_xe.SetAttribute('Checks', m_strLogCheck);
@@ -762,7 +766,7 @@ begin
   m_tmrCheckIpAddress.Enabled := true;
 
   m_ss := TServerSocket.Create(nil);
-  m_ss.Port := 54321;
+	m_ss.Port := CONFIG_PORT;
   m_ss.OnClientError := m_ssClientError;
   m_ss.OnClientRead := m_ssClientRead;
   m_ss.Active := true;
@@ -968,50 +972,50 @@ const
     '                  <tr>' +
     '                    <td align=center>' +
     '                      <font color=ffff00 face=helvetica size=2>' +
-		'                        <b>IP Right Version 0.9.4 Independent Rapid Development Limited</b>' +
-    '                      </font>' +
-    '                    </td>' +
-    '                  </tr>' +
-    '                </table>';
-  BOT =
-    '              </td>' +
-    '            </tr>' +
-    '          </table>' +
-    '        </td>' +
-    '      </tr>' +
-    '    </table>' +
-    '    <table align=center>' +
-    '      <a href=http://www.ird.co.nz>www.ird.co.nz</a>' +
-    '    </table>' +
-    '  </body>' +
-    '</html>';
-  LINE = '<table><tr><td>&nbsp;</td></tr></table>';
+		'                        <b>IP Right Version ' + CLIENT_VERSION + ' ' + CLIENT_COMPANY + '</b>' +
+		'                      </font>' +
+		'                    </td>' +
+		'                  </tr>' +
+		'                </table>';
+	BOT =
+		'              </td>' +
+		'            </tr>' +
+		'          </table>' +
+		'        </td>' +
+		'      </tr>' +
+		'    </table>' +
+		'    <table align=center>' +
+		'      <a href=http://www.ird.co.nz>www.ird.co.nz</a>' +
+		'    </table>' +
+		'  </body>' +
+		'</html>';
+	LINE = '<table><tr><td>&nbsp;</td></tr></table>';
 
-  HOST = 'host_';
-  HOST_LENGTH = length(HOST);
-  GET = 'GET ';
-  GET_LENGTH = length(GET);
-  TAIL = #$D#$A#$D#$A;
-  TAIL_LENGTH = length(TAIL);
-  CHECKED: array[false..true] of string = ('', ' checked=on');
+	HOST = 'host_';
+	HOST_LENGTH = length(HOST);
+	GET = 'GET ';
+	GET_LENGTH = length(GET);
+	TAIL = #$D#$A#$D#$A;
+	TAIL_LENGTH = length(TAIL);
+	CHECKED: array[false..true] of string = ('', ' checked=on');
 var
-  l_str: string;
-  l_i: integer;
-  l_hst: c_Host;
-  l_strName: string;
-  l_strValue: string;
-  l_n: integer;
-  l_strlHostEnabled: TStringList;
-  l_strlHostName: TStringList;
-  l_strlHostAddress: TStringList;
-  l_strlHostUpdated: TStringList;
-  l_strlHostResult: TStringList;
-  l_strGet: string;
+	l_str: string;
+	l_i: integer;
+	l_hst: c_Host;
+	l_strName: string;
+	l_strValue: string;
+	l_n: integer;
+	l_strlHostEnabled: TStringList;
+	l_strlHostName: TStringList;
+	l_strlHostAddress: TStringList;
+	l_strlHostUpdated: TStringList;
+	l_strlHostResult: TStringList;
+	l_strGet: string;
 begin
-  l_str := '';
-  repeat
-    l_str := l_str + p_cws.ReceiveText();
-  until (TAIL = copy(l_str, length(l_str) - (TAIL_LENGTH - 1), length(TAIL)));
+	l_str := '';
+	repeat
+		l_str := l_str + p_cws.ReceiveText();
+	until (TAIL = copy(l_str, length(l_str) - (TAIL_LENGTH - 1), length(TAIL)));
 
 	//Log(l_str);
 	//Log(p_cws.RemoteHost);
@@ -1034,8 +1038,8 @@ begin
 	end else begin}
 
 
-    // Expect "GET " then some path and filename then a "?" then our name/value
-    // pairs then a space.
+		// Expect "GET " then some path and filename then a "?" then our name/value
+		// pairs then a space.
     if (GET = copy(l_str, 1, GET_LENGTH)) then begin
       delete(l_str, 1, GET_LENGTH);
       l_i := pos('?', l_str);
