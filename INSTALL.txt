@@ -32,8 +32,8 @@ Once installed and started, open a web browser and navigate to
 http://[IP address or host name of IP Right service]:54321.
 
 Examples: http://localhost:54321
-					http://192.168.0.1:54321
-					http://mydnsparkupdateclientpc:54321
+          http://192.168.0.1:54321
+          http://mydnsparkupdateclientpc:54321
 
 Tick the "Check" section, set "Seconds" to at least 600 (DNS Park rule) tick
 "Internet", put ipdetect.dnspark.com in "Server", use 80 or 8888 in "Port" (if
@@ -52,6 +52,11 @@ To add more than one, click "Commit" when you've entered your first host and
 the configuration screen will pop back with an extra blank host. Fill out that
 blank host to add, take the tick out of any host that you want to remove and
 click "Commit" again.
+
+NOTE: IP Right sends the DNS Park username and password over HTTP and
+therefore is not secure. There is no username or password required for IP
+Right configuration; it can be configured by anyone with physical or network
+access on port 54321 to the host PC.
 
 How to stop and uninstall IP Right
 ==================================
