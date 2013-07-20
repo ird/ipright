@@ -1,0 +1,75 @@
+How to install and start IP Right
+=================================
+
+Copy IpRight.exe to a sensible location, let's say
+"C:\Program Files (x86)\IP Right\IpRight.exe" on 64 bit Windows or
+"C:\Program Files\IP Right\IpRight.exe" on 32 bit Windows.
+
+Open Command Prompt as Administrator.
+
+On 64 bit Windows, type:
+
+C:\Program Files (x86)\IP Right\IpRight.exe /INSTALL [ENTER]
+
+On 32 bit Windows, type:
+
+C:\Program Files\IP Right\IpRight.exe /INSTALL [ENTER]
+
+The service will install and be set to start when Windows starts.
+
+To start the service immediately, type:
+
+net start "IP Right" [ENTER]
+
+To stop the service, type:
+
+net stop "IP Right" [ENTER]
+
+How to configure IP Right
+=========================
+
+Once installed and started, open a web browser and navigate to
+http://[IP address or host name of IP Right service]:54321.
+
+Examples: http://localhost:54321
+					http://192.168.0.1:54321
+					http://mydnsparkupdateclientpc:54321
+
+Tick the "Check" section, set "Seconds" to at least 600 (DNS Park rule) tick
+"Internet", put ipdetect.dnspark.com in "Server", use 80 or 8888 in "Port" (if
+a proxy server messes up your IP address when using port 80, using port 8888
+will get around the proxy), "Username" and "Password" should be left blank,
+"Get" should be set to /, and you might like to put 0.0.0.0 in "Exclude".
+
+Tick the "Account" section, "Signin ID" and "Password" should be set to what
+you use to sign in to DNS Park, put a tick in "Mail" and set "Priority" to 0
+if you host your own mail.
+
+Tick the "Host" section and put your host name in "Name" (You will need one
+host for every host record (A) you have setup on DNS Park. You do not need any
+host records for alias records (CNAME)). You can add as many hosts as you want.
+To add more than one, click "Commit" when you've entered your first host and
+the configuration screen will pop back with an extra blank host. Fill out that
+blank host to add, take the tick out of any host that you want to remove and
+click "Commit" again.
+
+How to stop and uninstall IP Right
+==================================
+
+Identify the location of IP Right, let's say
+"C:\Program Files (x86)\IP Right\IpRight.exe" on 64 bit Windows or
+"C:\Program Files\IP Right\IpRight.exe" on 32 bit Windows.
+
+Open Command Prompt as Administrator.
+
+To stop the service, type:
+
+net stop "IP Right" [ENTER]
+
+On 64 bit Windows, type:
+
+C:\Program Files (x86)\IP Right\IpRight.exe /UNINSTALL [ENTER]
+
+On 32 bit Windows, type:
+
+C:\Program Files\IP Right\IpRight.exe /UNINSTALL [ENTER]
