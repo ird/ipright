@@ -42,11 +42,7 @@ type
       const p_strName: string
     ): c_XmlElement;
 
-    function QryAttribute(
-      const p_strName: string
-    ): boolean;
-
-    procedure SetAttribute(
+		procedure SetAttribute(
       const p_strName: string;
       const p_strValue: string
     );
@@ -58,9 +54,6 @@ type
     function GetElement(
       const p_i: integer
     ): c_XmlElement;
-
-    function GetName(
-    ): string;
 
     constructor Create(
       const p_strName: string
@@ -156,12 +149,6 @@ begin
       'z']));
 end;
 
-function QryNumeric(
-): boolean;
-begin
-  result := ((length(QryWord()) > 0) and (QryWord()[1] in ['0'..'9']));
-end;
-
 function GetWord(
 ): string;
 begin
@@ -226,26 +213,6 @@ begin
   end;
 
 end;
-
-procedure Open(
-  const p_strFilename: string
-);
-begin
-  u_st := TFileStream.Create(p_strFilename, (fmOpenRead or fmShareDenyWrite));
-  try
-    GetCharacter();
-    GetWord();
-  except
-    FreeAndNil(u_st);
-    raise;
-  end;
-end;
-
-procedure Close(
-);
-begin
-end;
-
 
 function c_XmlElement.AddElement(
   const p_strName: string
@@ -319,12 +286,6 @@ begin
     exit;
   end;
   result := c_XmlElement(l_strl.Objects[p_i]);
-end;
-
-function c_XmlElement.GetName(
-): string;
-begin
-  result := m_strName;
 end;
 
 function c_XmlElement.LoadElement(
@@ -401,13 +362,6 @@ begin
   GetCharacter();
   GetWord();
   LoadElement();
-end;
-
-function c_XmlElement.QryAttribute(
-  const p_strName: string
-): boolean;
-begin
-  result := (- 1 <> m_strlAttribute.IndexOf(p_strName));
 end;
 
 procedure c_XmlElement.SaveToStream(

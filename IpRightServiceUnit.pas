@@ -219,7 +219,7 @@ uses
 const
 	LOG_FILENAME = 'IpRight.log';
 	XML_FILENAME = 'IpRight.xml';
-	CLIENT_VERSION = '0.9.5';
+	CLIENT_VERSION = '0.9.6';
 	CLIENT_COMPANY = 'Independent Rapid Development Limited';
 	CLIENT_EMAIL = 'stacey.richards@ird.co.nz';
 	CONFIG_PORT = 54321;
