@@ -84,9 +84,7 @@ type
 
     m_ss: TServerSocket;
 
-    procedure Log(
-      p_str: string
-    );
+    procedure Log(p_str: string);
 
     procedure LogMethod(
       const p_str: string
@@ -96,11 +94,9 @@ type
       const p_xe: c_XmlElement
     );
 
-    procedure Load(
-    );
+    procedure Load();
 
-    procedure Save(
-    );
+    procedure Save();
 
     procedure EnableTimer(
 		);
@@ -219,7 +215,7 @@ uses
 const
 	LOG_FILENAME = 'IpRight.log';
 	XML_FILENAME = 'IpRight.xml';
-	CLIENT_VERSION = '0.9.6';
+	CLIENT_VERSION = '0.9.7';
 	CLIENT_COMPANY = 'Independent Rapid Development Limited';
 	CLIENT_EMAIL = 'stacey.richards@ird.co.nz';
 	CONFIG_PORT = 54321;
@@ -336,22 +332,23 @@ end;
 procedure TIpRightService.Load(
 );
 var
+  filename: string;
+  filestream: TFileStream;
   l_xeRoot: c_XmlElement;
-	l_fs: TFileStream;
   l_i: integer;
   l_xe: c_XmlElement;
 begin
-  if (not FileExists(XML_FILENAME)) then begin
+  filename := ExtractFilePath(ParamStr(0)) + XML_FILENAME;
+  if (not FileExists(filename)) then begin
     exit;
   end;
   l_xeRoot := c_XmlElement.Create('');
   try
-    l_fs := TFileStream.Create(XML_FILENAME, (fmOpenRead or
-        fmShareDenyWrite));
+    filestream := TFileStream.Create(filename, (fmOpenRead or fmShareDenyWrite));
     try
-      l_xeRoot.LoadFromStream(l_fs);
+      l_xeRoot.LoadFromStream(filestream);
     finally
-      FreeAndNil(l_fs);
+      FreeAndNil(filestream);
     end;
     for l_i := 0 to l_xeRoot.m_strlElement.Count - 1 do begin
       l_xe := c_XMLElement(l_xeRoot.m_strlElement.Objects[l_i]);
@@ -370,8 +367,7 @@ begin
         m_strCheckIpUsername := l_xe.GetAttribute('Username');
         m_strCheckIpPassword := l_xe.GetAttribute('Password');
         m_strCheckIpGet := l_xe.GetAttribute('Get');
-        m_strCheckIpExcludeIpAddresses := l_xe.GetAttribute(
-          'ExcludeIpAddresses');
+        m_strCheckIpExcludeIpAddresses := l_xe.GetAttribute('ExcludeIpAddresses');
       end else if ('Account' = l_xe.m_strName) then begin
         m_acc.Load(l_xe);
       end;
@@ -388,36 +384,31 @@ begin
   end;
 end;
 
-procedure TIpRightService.Log(
-  p_str: string
-);
+procedure TIpRightService.Log(p_str: string);
 var
-  l_fs: TFileStream;
+  filename: string;
+  filestream: TFileStream;
 begin
+  filename := ExtractFilePath(ParamStr(0)) + LOG_FILENAME;
   if ('1' <> m_strLog) then begin
     exit;
   end;
-
   // Make sure there is a log file that we can log to.
-  if (not FileExists(LOG_FILENAME)) then begin
+  if (not FileExists(filename)) then begin
     try
-      l_fs := TFileStream.Create(LOG_FILENAME, (fmCreate or
-          fmShareDenyWrite));
+      filestream := TFileStream.Create(filename, (fmCreate or fmShareDenyWrite));
     finally
-      FreeAndNil(l_fs);
+      FreeAndNil(filestream);
     end;
   end;
-
-  l_fs := TFileStream.Create(LOG_FILENAME, fmOpenReadWrite or
-      fmShareDenyWrite);
+  filestream := TFileStream.Create(filename, fmOpenReadWrite or fmShareDenyWrite);
   try
-    l_fs.Seek(0, soFromEnd);
-    l_fs.Position := l_fs.Size;
-    p_str := FormatDateTime('yyyy-mm-dd hh:nn:ss', Now()) + ' ' + p_str +
-      #$D#$A;
-		l_fs.WriteBuffer(pchar(p_str)^, length(p_str));
+    filestream.Seek(0, soFromEnd);
+    filestream.Position := filestream.Size;
+    p_str := FormatDateTime('yyyy-mm-dd hh:nn:ss', Now()) + ' ' + p_str + #$D#$A;
+		filestream.WriteBuffer(pchar(p_str)^, length(p_str));
   finally
-    FreeAndNil(l_fs);
+    FreeAndNil(filestream);
   end;
 end;
 
@@ -716,11 +707,10 @@ begin
   end;
 end;
 
-procedure TIpRightService.Save(
-);
+procedure TIpRightService.Save();
 var
+  filestream: TFileStream;
   l_xeRoot: c_XMLElement;
-  l_fs: TFileStream;
   l_xe: c_XmlElement;
 begin
   LogMethod('Saving.');
@@ -743,12 +733,11 @@ begin
     l_xe.SetAttribute('Get', m_strCheckIpGet);
     l_xe.SetAttribute('ExcludeIpAddresses', m_strCheckIpExcludeIpAddresses);
     m_acc.Save(l_xeRoot);
-    l_fs := TFileStream.Create(XML_FILENAME, (fmCreate or
-        fmShareDenyWrite));
+    filestream := TFileStream.Create(ExtractFilePath(ParamStr(0)) + XML_FILENAME, (fmCreate or fmShareDenyWrite));
     try
-      l_xeRoot.SaveToStream(l_fs, '');
+      l_xeRoot.SaveToStream(filestream, '');
     finally
-      FreeAndNil(l_fs);
+      FreeAndNil(filestream);
     end;
     LogOptions(l_xeRoot);
   finally
