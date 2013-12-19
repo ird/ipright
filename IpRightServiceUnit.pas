@@ -1300,7 +1300,14 @@ begin
 			BOT;
   //end;
 
-  p_cws.SendText(l_str);
+  p_cws.SendText
+  (
+        'HTTP/1.1 200 OK' + #$D#$A +
+        'Content-Length: ' + IntToStr(length(l_str)) + #$D#$A +
+        'Content-Type: text/html' + #$D#$A +
+        #$D#$A +
+        l_str
+  );
   p_cws.Close();
 end;
 
