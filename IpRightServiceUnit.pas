@@ -215,7 +215,7 @@ uses
 const
 	LOG_FILENAME = 'IpRight.log';
 	XML_FILENAME = 'IpRight.xml';
-	CLIENT_VERSION = '0.9.7';
+	CLIENT_VERSION = '0.9.8';
 	CLIENT_COMPANY = 'Independent Rapid Development Limited';
 	CLIENT_EMAIL = 'stacey.richards@ird.co.nz';
 	CONFIG_PORT = 54321;
@@ -946,48 +946,15 @@ procedure TIpRightService.m_ssClientRead(
   p_cws: TCustomWinSocket
 );
 const
-  TOP =
-    '<html>' +
-    '  <head>' +
-    '  </head>' +
-    '  <body>' +
-    '    <table align=center bgcolor=ffff00 border=0 cellpadding=0 cellspacing=1>' +
-    '      <tr>' +
-    '        <td>' +
-    '          <table align=center bgcolor=ffffff border=0 cellpadding=0 cellspacing=1>' +
-    '            <tr>' +
-    '              <td>' +
-    '                <table align=center bgcolor=000000 border=0 cellpadding=2 cellspacing=1 text=ffffff width=750>' +
-    '                  <tr>' +
-    '                    <td align=center>' +
-    '                      <font color=ffff00 face=helvetica size=2>' +
-		'                        <b>IP Right Version ' + CLIENT_VERSION + ' ' + CLIENT_COMPANY + '</b>' +
-		'                      </font>' +
-		'                    </td>' +
-		'                  </tr>' +
-		'                </table>';
-	BOT =
-		'              </td>' +
-		'            </tr>' +
-		'          </table>' +
-		'        </td>' +
-		'      </tr>' +
-		'    </table>' +
-		'    <table align=center>' +
-		'      <a href=http://www.ird.co.nz>www.ird.co.nz</a>' +
-		'    </table>' +
-		'  </body>' +
-		'</html>';
-	LINE = '<table><tr><td>&nbsp;</td></tr></table>';
-
 	HOST = 'host_';
 	HOST_LENGTH = length(HOST);
 	GET = 'GET ';
 	GET_LENGTH = length(GET);
 	TAIL = #$D#$A#$D#$A;
 	TAIL_LENGTH = length(TAIL);
-	CHECKED: array[false..true] of string = ('', ' checked=on');
 var
+  hosts: string;
+  response: string;
 	l_str: string;
 	l_i: integer;
 	l_hst: c_Host;
@@ -1000,33 +967,34 @@ var
 	l_strlHostUpdated: TStringList;
 	l_strlHostResult: TStringList;
 	l_strGet: string;
+
+  function Checkbox(p_label: string; p_name: string; p_value: boolean): string;
+  var
+    checked: string;
+  begin
+    if (p_value) then begin
+      checked := 'checked="checked" ';
+    end else begin
+      checked := '';
+    end;
+    result := '<label for="' + p_name + '">' + p_label + '</label><input ' + checked + 'id="' + p_name + '" name="' + p_name + '" type="checkbox" />';
+  end;
+
+  function Text(p_label: string; p_name: string; p_value: string): string;
+  begin
+    result := '<label for="' + p_name + '">' + p_label + '</label><input id="' + p_name + '" name="' + p_name + '" type="text" value="' + p_value + '" />';
+  end;
+
+  function Password(p_label: string; p_name: string; p_value: string): string;
+  begin
+    result := '<label for="' + p_name + '">' + p_label + '</label><input id="' + p_name + '" name="' + p_name + '" type="password" value="' + p_value + '" />';
+  end;
+
 begin
 	l_str := '';
 	repeat
 		l_str := l_str + p_cws.ReceiveText();
 	until (TAIL = copy(l_str, length(l_str) - (TAIL_LENGTH - 1), length(TAIL)));
-
-	//Log(l_str);
-	//Log(p_cws.RemoteHost);
-
-	{if ('localhost' <> p_cws.RemoteHost) then begin
-		l_str :=
-			TOP +
-			LINE +
-			'<table align=center bgcolor=ffffff border=0 cellpadding=2 cellspacing=1 text=ffffff>' +
-			'<tr>' +
-			'<td align=center>' +
-			'<font color=882222 face=helvetica size=2>' +
-			'<b>IP Right web browser configuration is only allowed from localhost</b>' +
-			'</font>' +
-			'</td>' +
-			'</tr>' +
-			'</table>' +
-			LINE +
-			BOT;
-	end else begin}
-
-
 		// Expect "GET " then some path and filename then a "?" then our name/value
 		// pairs then a space.
     if (GET = copy(l_str, 1, GET_LENGTH)) then begin
@@ -1215,87 +1183,208 @@ begin
         end;
       end;
     end;
-
-    l_str := TOP +
-      '<form method=get action=commit.html>' +
-      '<table align=center>' +
-      '<tr>' +
-      '<td>' +
-      '<b>Log</b>' +
-      '</td>' +
-      '<td><input name=log_enabled type=checkbox' + CHECKED['1' = m_strLog] + '></input></td>' +
-      '<td>Methods</td><td><input name=log_methods type=checkbox' + CHECKED['1' = m_strLogMethod] + '></input></td>' +
-      '<td>Options</td><td><input name=log_options type=checkbox' + CHECKED['1' = m_strLogOption] + '></input></td></tr>' +
-      '<tr><td colspan=2></td><td>Checks</td><td><input name=log_checks type=checkbox' + CHECKED['1' = m_strLogCheck] + '></input></td>' +
-      '<td>Updates</td><td><input name=log_updates type=checkbox' + CHECKED['1' = m_strLogUpdate] + '></input></td></tr>' +
-      '<tr>' +
-      '<td>' +
-      '<b>Check</b>' +
-      '</td>' +
-      '<td><input name=check_enabled type=checkbox' + CHECKED['1' = m_strCheckIp] + '></input></td>' +
-      '<td>Seconds</td><td><input name=check_tick value="' + m_strCheckIpTick + '"></input></td>' +
-      '<td>Internet</td><td><input name=check_internet type=checkbox' + CHECKED['1' = m_strCheckIpInternet] + '></input></td></tr>' +
-      '<tr><td colspan=2></td><td>Server</td><td><input name=check_server value="' + m_strCheckIpServer + '"></input></td>' +
-      '<td>Port</td><td><input name=check_port value="' + m_strCheckIpPort + '"></input></td></tr>' +
-      '<tr><td colspan=2><td>Username</td><td><input name=check_username value="' + m_strCheckIpUsername + '"></input></td>' +
-      '<td>Password</td><td><input name=check_password type=password value="' + m_strCheckIpPassword + '"></input></td></tr>' +
-      '<tr><td colspan=2><td>Get</td><td><input name=check_get value="' + m_strCheckIpGet + '"></input></td>' +
-      '<td>Exclude</td><td><input name=check_exclude value="' + m_strCheckIpExcludeIpAddresses + '"></input></td></tr>' +
-      '<tr>' +
-      '<td>' +
-      '<b>Account</b>' +
-      '</td>' +
-      '<td><input name=account_enabled type=checkbox' + CHECKED['1' <> m_acc.m_strDisabled] + '></input></td>' +
-      '<td>Signin ID</td><td><input name=account_username value="' + m_acc.m_strUsername + '"></input></td>' +
-      '<td>Password</td><td><input name=account_password type=password value="' + m_acc.m_strPassword + '"></input></td></tr>' +
-      '<tr><td colspan=2><td>Mail</td><td><input name=account_mail type=checkbox' + CHECKED['1' = m_acc.m_strMx] + '></input></td>' +
-      '<td>Priority</td><td><input name=account_priority value="' + m_acc.m_strMxPri + '"></input></td></tr>';
-
-
+    hosts := '';
     for l_i := 0 to m_acc.m_olHost.Count - 1 do begin
-
       l_hst := m_acc.m_olHost.Items[l_i] as c_Host;
-      l_str := l_str +
-        '<tr>' +
-        '<td>' +
-        '<b>Host</b>' +
-        '</td>' +
-        '<td><input name=host_' + IntToStr(l_i) + '_enabled type=checkbox' + CHECKED['1' <> l_hst.m_strDisabled] + '></input></td>' +
-        '<td>Name</td><td><input name=host_' + IntToStr(l_i) + '_name value="' + l_hst.m_strName + '"></input></td>';
-//        '<td>Address</td><td><input name=host_' + IntToStr(l_i) + '_address value="' + l_hst.m_strIpAddress + '"></input></td></tr>' +
-//        '<input name=host_' + IntToStr(l_i) + '_updated type=hidden value="' + l_hst.m_strUpdated + '"></input>' +
-//        '<input name=host_' + IntToStr(l_i) + '_result type=hidden value="' + l_hst.m_strResultCode + '"></input>';
-
+      hosts :=
+        hosts +
+        '            <li>' + Checkbox('Host', 'host_' + IntToStr(l_i) + '_enabled', '1' <> l_hst.m_strDisabled) + #$D#$A +
+        '              <ul>' + #$D#$A +
+        '                <li>' + Text('Name', 'host_' + IntToStr(l_i) + '_name', l_hst.m_strName) + '</li>' + #$D#$A +
+        '              </ul>' + #$D#$A +
+        '            </li>' + #$D#$A;
     end;
-
-    l_i := m_acc.m_olHost.Count;
-
-    l_str := l_str +
-      '<tr>' +
-      '<td>' +
-      '<b>Host</b>' +
-      '</td>' +
-      '<td><input name=host_' + IntToStr(l_i) + '_enabled type=checkbox></input></td>' +
-      '<td>Name</td><td><input name=host_' + IntToStr(l_i) + '_name></input></td>';
-//      '<td>Address</td><td><input name=host_' + IntToStr(l_i) + '_address></input></td></tr>';
-
-
-    l_str := l_str +
-      '</table>' +
-      '<table align=center>' +
-      '<input type=submit value="Commit"></input>' +
-      '</table>' +
-			'</form>' +
-			BOT;
-  //end;
-
+		hosts :=
+      hosts +
+      '            <li>' + Checkbox('Host', 'host_' + IntToStr(m_acc.m_olHost.Count) + '_enabled', False) + #$D#$A +
+      '              <ul>' + #$D#$A +
+      '                <li>' + Text('Name', 'host_' + IntToStr(m_acc.m_olHost.Count) + '_name', '') + '</li>' + #$D#$A +
+      '              </ul>' + #$D#$A +
+      '            </li>' + #$D#$A;
+  response :=
+    '<!DOCTYPE html>' + #$D#$A +
+    '<html>' + #$D#$A +
+    '  <head>' + #$D#$A +
+    '    <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">' + #$D#$A +
+    '    <title>IP Right Version ' + CLIENT_VERSION + ' ' + CLIENT_COMPANY + '</title>' + #$D#$A +
+    '    <style>' + #$D#$A +
+    '      body' + #$D#$A +
+    '      {' + #$D#$A +
+    '        margin: 0px;' + #$D#$A +
+    '        font-family: "wf_SegoeUILight", "wf_SegoeUI", "Segoe UI Light", "Segoe WP Light", "Segoe UI", "Segoe", "Segoe WP", "Tahoma", "Verdana", "Arial", "sans-serif";' + #$D#$A +
+    '        font-weight: 300;' + #$D#$A +
+    '        letter-spacing: 0.02em;' + #$D#$A +
+    '      }' + #$D#$A +
+    '      div.header' + #$D#$A +
+    '      {' + #$D#$A +
+    '        background-color: #1570a6;' + #$D#$A +
+    '        padding: 10px 0;' + #$D#$A +
+    '        color: #fff;' + #$D#$A +
+    '        -moz-box-shadow: 0px 2px 4px #ccc;' + #$D#$A +
+    '        -webkit-box-shadow: 0px 2px 4px #ccc;' + #$D#$A +
+    '        box-shadow: 0px 2px 4px #ccc;' + #$D#$A +
+    '        text-align: center;' + #$D#$A +
+    '      }' + #$D#$A +
+    '      div.footer_wrapper' + #$D#$A +
+    '      {' + #$D#$A +
+    '        background-color: #1570a6;' + #$D#$A +
+    '        padding: 10px 0;' + #$D#$A +
+    '        color: #fff;' + #$D#$A +
+    '        -moz-box-shadow: 0px -2px 4px #ccc;' + #$D#$A +
+    '        -webkit-box-shadow: 0px -2px 4px #ccc;' + #$D#$A +
+    '        box-shadow: 0px -2px 4px #ccc;' + #$D#$A +
+    '        text-align: center;' + #$D#$A +
+    '      }' + #$D#$A +
+    '      div.footer' + #$D#$A +
+    '      {' + #$D#$A +
+    '        width: 1020px;' + #$D#$A +
+    '        margin: 0px auto;' + #$D#$A +
+    '      }' + #$D#$A +
+    '      div.footer a' + #$D#$A +
+    '      {' + #$D#$A +
+    '        color: #fff;' + #$D#$A +
+    '      }' + #$D#$A +
+    '      div.content_wrapper' + #$D#$A +
+    '      {' + #$D#$A +
+    '        width: 1020px;' + #$D#$A +
+    '        margin: 0px auto;' + #$D#$A +
+    '        border-radius: 5px;' + #$D#$A +
+    '      }' + #$D#$A +
+    '      div.content' + #$D#$A +
+    '      {' + #$D#$A +
+    '        padding: 2px 20px 20px 20px;' + #$D#$A +
+    '      }' + #$D#$A +
+    '      input' + #$D#$A +
+    '      {' + #$D#$A +
+    '        margin-left: 10px;' + #$D#$A +
+    '        padding-left: 5px;' + #$D#$A +
+    '        padding-right: 5px;' + #$D#$A +
+    '        font-size: 0.8em;' + #$D#$A +
+    '        font-weight: 300;' + #$D#$A +
+    '        font-family: "wf_SegoeUILight", "wf_SegoeUI", "Segoe UI Light", "Segoe WP Light", "Segoe UI", "Segoe", "Segoe WP", "Tahoma", "Verdana", "Arial", "sans-serif";' + #$D#$A +
+    '        font-weight: 300;' + #$D#$A +
+    '        letter-spacing: 0.02em;' + #$D#$A +
+    '      }' + #$D#$A +
+    '      input[type="checkbox"]' + #$D#$A +
+    '      {' + #$D#$A +
+    '        width: 0.7em;' + #$D#$A +
+    '        height: 0.7em;' + #$D#$A +
+    '      }' + #$D#$A +
+    '      ul li ul li label' + #$D#$A +
+    '      {' + #$D#$A +
+    '        white-space: nowrap;' + #$D#$A +
+    '        overflow: visible;' + #$D#$A +
+    '        display: inline-block;' + #$D#$A +
+    '        text-align: right;' + #$D#$A +
+    '        min-width: 190px;' + #$D#$A +
+    '      }' + #$D#$A +
+    '      ul' + #$D#$A +
+    '      {' + #$D#$A +
+    '        list-style: none;' + #$D#$A +
+    '      }' + #$D#$A +
+    '      ul li' + #$D#$A +
+    '      {' + #$D#$A +
+    '        font-size: 1.8em;' + #$D#$A +
+    '        border-bottom: 1px solid #ccc;' + #$D#$A +
+    '        padding-bottom: 20px;' + #$D#$A +
+    '        margin-bottom: 10px;' + #$D#$A +
+    '      }' + #$D#$A +
+    '      ul li ul' + #$D#$A +
+    '      {' + #$D#$A +
+    '        border: 0px solid blue;' + #$D#$A +
+    '        column-count: 2;' + #$D#$A +
+    '        column-gap: 10px;' + #$D#$A +
+    '        -webkit-column-count: 2;' + #$D#$A +
+    '        -webkit-column-gap: 10px;' + #$D#$A +
+    '        -moz-column-count: 2;' + #$D#$A +
+    '        -moz-column-gap: 10px;' + #$D#$A +
+    '        -ms-column-count: 2;' + #$D#$A +
+    '        -ms-column-gap: 10px;' + #$D#$A +
+    '        -o-column-count: 2;' + #$D#$A +
+    '        -o-column-gap: 10px;' + #$D#$A +
+    '      }' + #$D#$A +
+    '      ul li ul li' + #$D#$A +
+    '      {' + #$D#$A +
+    '        padding: 5px 0;' + #$D#$A +
+    '        font-size: 0.8em;' + #$D#$A +
+    '        border-bottom: 0px;' + #$D#$A +
+    '        margin-bottom: 0;' + #$D#$A +
+    '      }' + #$D#$A +
+    '    </style>' + #$D#$A +
+    '  </head>' + #$D#$A +
+    '  <body>' + #$D#$A +
+    '    <div class="header"><h1>IP Right Version ' + CLIENT_VERSION + ' ' + CLIENT_COMPANY + '</h1></div>' + #$D#$A +
+    '    <div class="content_wrapper">' + #$D#$A +
+    '      <div class="content">' + #$D#$A +
+    '        <form action="commit.html" method="get">' + #$D#$A +
+    '          <ul>' + #$D#$A +
+    '            <li>' + Checkbox('Log', 'log_enabled', '1' = m_strLog) + #$D#$A +
+    '              <ul>' + #$D#$A +
+    '                <li>' + Checkbox('Log Checks', 'log_checks', '1' = m_strLogCheck) + '</li>' + #$D#$A +
+    '                <li>' + Checkbox('Log Methods', 'log_methods', '1' = m_strLogMethod) + '</li>' + #$D#$A +
+    '                <li>' + Checkbox('Log Options', 'log_options', '1' = m_strLogOption) + '</li>' + #$D#$A +
+    '                <li>' + Checkbox('Log Updates', 'log_updates', '1' = m_strLogUpdate) + '</li>' + #$D#$A +
+    '              </ul>' + #$D#$A +
+    '            </li>' + #$D#$A +
+    '            <li>' + Checkbox('Checks', 'check_enabled', '1' = m_strCheckIp) + #$D#$A +
+    '              <ul>' + #$D#$A +
+    '               <li>' + Text('Interval In Seconds', 'check_tick', m_strCheckIpTick) + '</li>' + #$D#$A +
+    '               <li>' + Checkbox('Internet', 'check_internet', '1' = m_strCheckIpInternet) + '</li>' + #$D#$A +
+    '               <li>' + Text('Server', 'check_server', m_strCheckIpServer) + '</li>' + #$D#$A +
+    '               <li>' + Text('Port', 'check_port', m_strCheckIpPort) + '</li>' + #$D#$A +
+    '               <li>' + Text('Username', 'check_username', m_strCheckIpUsername) + '</li>' + #$D#$A +
+    '               <li>' + Password('Password', 'check_password', m_strCheckIpPassword) + '</li>' + #$D#$A +
+    '               <li>' + Text('Get', 'check_get', m_strCheckIpGet) + '</li>' + #$D#$A +
+    '               <li>' + Text('Exclude', 'check_exclude', m_strCheckIpExcludeIpAddresses) + '</li>' + #$D#$A +
+    '              </ul>' + #$D#$A +
+    '            </li>' + #$D#$A +
+    '            <li>' + Checkbox('Account', 'account_enabled', '1' <> m_acc.m_strDisabled) + #$D#$A +
+    '              <ul>' + #$D#$A +
+    '                <li>' + Text('Signin ID', 'account_username', m_acc.m_strUsername) + '</li>' + #$D#$A +
+    '                <li>' + Password('Password', 'account_password', m_acc.m_strPassword) + '</li>' + #$D#$A +
+    '                <li>' + Checkbox('Mail', 'account_mail', '1' = m_acc.m_strMx) + '</li>' + #$D#$A +
+    '                <li>' + Text('Priority', 'account_priority', m_acc.m_strMxPri) + '</li>' + #$D#$A +
+    '              </ul>' + #$D#$A +
+    '            </li>' + #$D#$A +
+    hosts +
+    '          </ul>' + #$D#$A +
+    '          <input type="submit">' + #$D#$A +
+    '        </form>' + #$D#$A +
+    '      </div>' + #$D#$A +
+    '    </div>' + #$D#$A +
+    '    <div class="footer_wrapper">' + #$D#$A +
+    '      <div class="footer">' + #$D#$A +
+    '        <p>This is free and unencumbered software released into the public domain.</p>' + #$D#$A +
+    '        <p>Anyone is free to copy, modify, publish, use, compile, sell, or' + #$D#$A +
+    '        distribute this software, either in source code form or as a compiled' + #$D#$A +
+    '        binary, for any purpose, commercial or non-commercial, and by any' + #$D#$A +
+    '        means.</p>' + #$D#$A +
+    '        <p>In jurisdictions that recognize copyright laws, the author or authors' + #$D#$A +
+    '        of this software dedicate any and all copyright interest in the' + #$D#$A +
+    '        software to the public domain. We make this dedication for the benefit' + #$D#$A +
+    '        of the public at large and to the detriment of our heirs and' + #$D#$A +
+    '        successors. We intend this dedication to be an overt act of' + #$D#$A +
+    '        relinquishment in perpetuity of all present and future rights to this' + #$D#$A +
+    '        software under copyright law.</p>' + #$D#$A +
+    '        <p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,' + #$D#$A +
+    '        EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF' + #$D#$A +
+    '        MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.' + #$D#$A +
+    '        IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR' + #$D#$A +
+    '        OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,' + #$D#$A +
+    '        ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR' + #$D#$A +
+    '        OTHER DEALINGS IN THE SOFTWARE.</p>' + #$D#$A +
+    '        <p>For more information, please refer to <a href="http://unlicense.org/">http://unlicense.org/</a></p>' + #$D#$A +
+    '      </div>' + #$D#$A +
+    '    </div>' + #$D#$A +
+    '  </body>' + #$D#$A +
+    '</html>' + #$D#$A;
   p_cws.SendText
   (
         'HTTP/1.1 200 OK' + #$D#$A +
-        'Content-Length: ' + IntToStr(length(l_str)) + #$D#$A +
+        'Content-Length: ' + IntToStr(length(response)) + #$D#$A +
         'Content-Type: text/html' + #$D#$A +
         #$D#$A +
-        l_str
+        response
   );
   p_cws.Close();
 end;
