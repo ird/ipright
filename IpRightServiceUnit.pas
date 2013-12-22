@@ -4,36 +4,9 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, SvcMgr, Dialogs,
-  ScktComp, ExtCtrls, Contnrs, XmlUnit;
+  ScktComp, ExtCtrls, Contnrs, XmlUnit, AccountUnit;
 
 type
-  c_Account = class(TObject)
-  private
-    m_strDisabled: string;
-    m_strServer: string;
-    m_strPort: string;
-    m_strUsername: string;
-    m_strPassword: string;
-    m_olHost: TObjectList;
-	public
-    constructor Create();
-    destructor Destroy(); override;
-    procedure Load(const p_xe: c_XmlElement);
-    procedure Save(const p_xe: c_XmlElement);
-  end;
-
-  c_Host = class(TObject)
-  private
-    m_strDisabled: string;
-    m_strName: string;
-    m_strUpdated: string; // when host was last successfully updated.
-    m_strIpAddress: string; // last ip address successfully updated.
-    m_strResultCode: string; // last reply status
-  public
-    procedure Load(const p_xe: c_XmlElement);
-    procedure Save(const p_xe: c_XmlElement);
-  end;
-
   TIpRightService = class(TService)
     procedure ServiceExecute(Sender: TService);
     procedure ServiceShutdown(Sender: TService);
@@ -64,7 +37,7 @@ type
     m_ss: TServerSocket;
     procedure Log(p_str: string);
     procedure LogMethod(const p_str: string);
-    procedure LogOptions(const p_xe: c_XmlElement);
+    procedure LogOptions(const p_xe: c_xml_element);
     procedure Load();
     procedure Save();
     procedure EnableTimer();
@@ -131,14 +104,13 @@ implementation
 {$R *.DFM}
 
 uses
-	FileCtrl,
-	UtilityUnit;
+	FileCtrl, HostUnit, HtmlUnit, UtilityUnit;
 
 const
   LOG_FILENAME = 'IpRight.log';
   XML_FILENAME = 'IpRight.xml';
   CLIENT_NAME = 'IP Right for DNSdynamic';
-  CLIENT_VERSION = '0.9.9';
+  CLIENT_VERSION = '0.9.10';
   CLIENT_COMPANY = 'Independent Rapid Development Limited';
   CLIENT_EMAIL = 'stacey.richards@ird.co.nz';
   CONFIG_PORT = 54321;
@@ -257,41 +229,41 @@ procedure TIpRightService.Load();
 var
   filename: string;
   filestream: TFileStream;
-  l_xeRoot: c_XmlElement;
+  l_xeRoot: c_xml_element;
   l_i: integer;
-  l_xe: c_XmlElement;
+  l_xe: c_xml_element;
 begin
   filename := ExtractFilePath(ParamStr(0)) + XML_FILENAME;
   if (not FileExists(filename)) then begin
     exit;
   end;
-  l_xeRoot := c_XmlElement.Create('');
+  l_xeRoot := c_xml_element.create('');
   try
     filestream := TFileStream.Create(filename, (fmOpenRead or fmShareDenyWrite));
     try
-      l_xeRoot.LoadFromStream(filestream);
+      l_xeRoot.load_from_stream(filestream);
     finally
       FreeAndNil(filestream);
     end;
-    for l_i := 0 to l_xeRoot.m_strlElement.Count - 1 do begin
-      l_xe := c_XMLElement(l_xeRoot.m_strlElement.Objects[l_i]);
-      if ('Log' = l_xe.m_strName) then begin
-        m_strLog := l_xe.GetAttribute('Enabled');
-        m_strLogMethod := l_xe.GetAttribute('Methods');
-        m_strLogOption := l_xe.GetAttribute('Options');
-        m_strLogCheck := l_xe.GetAttribute('Checks');
-        m_strLogUpdate := l_xe.GetAttribute('Updates');
-      end else if ('Check' = l_xe.m_strName) then begin
-        m_strCheckIp := l_xe.GetAttribute('Enabled');
-        m_strCheckIpTick := l_xe.GetAttribute('Tick');
-        m_strCheckIpInternet := l_xe.GetAttribute('Internet');
-        m_strCheckIpServer := l_xe.GetAttribute('Server');
-        m_strCheckIpPort := l_xe.GetAttribute('Port');
-        m_strCheckIpUsername := l_xe.GetAttribute('Username');
-        m_strCheckIpPassword := l_xe.GetAttribute('Password');
-        m_strCheckIpGet := l_xe.GetAttribute('Get');
-        m_strCheckIpExcludeIpAddresses := l_xe.GetAttribute('ExcludeIpAddresses');
-      end else if ('Account' = l_xe.m_strName) then begin
+    for l_i := 0 to l_xeRoot.m_elements.Count - 1 do begin
+      l_xe := c_xml_element(l_xeRoot.m_elements.Objects[l_i]);
+      if ('Log' = l_xe.m_name) then begin
+        m_strLog := l_xe.get_attribute('Enabled');
+        m_strLogMethod := l_xe.get_attribute('Methods');
+        m_strLogOption := l_xe.get_attribute('Options');
+        m_strLogCheck := l_xe.get_attribute('Checks');
+        m_strLogUpdate := l_xe.get_attribute('Updates');
+      end else if ('Check' = l_xe.m_name) then begin
+        m_strCheckIp := l_xe.get_attribute('Enabled');
+        m_strCheckIpTick := l_xe.get_attribute('Tick');
+        m_strCheckIpInternet := l_xe.get_attribute('Internet');
+        m_strCheckIpServer := l_xe.get_attribute('Server');
+        m_strCheckIpPort := l_xe.get_attribute('Port');
+        m_strCheckIpUsername := l_xe.get_attribute('Username');
+        m_strCheckIpPassword := l_xe.get_attribute('Password');
+        m_strCheckIpGet := l_xe.get_attribute('Get');
+        m_strCheckIpExcludeIpAddresses := l_xe.get_attribute('ExcludeIpAddresses');
+      end else if ('Account' = l_xe.m_name) then begin
         m_acc.Load(l_xe);
       end;
     end;
@@ -344,7 +316,7 @@ var
   l_str: string;
   l_strHostNames: string;
   l_i: integer;
-  l_hst: c_Host;
+  l_hst: c_host;
   l_slExcludeIpAddress: TStringList;
 begin
   LogMethod('Check IP address socket disconnected.');
@@ -392,13 +364,13 @@ begin
   Log('Got IP address "' + l_str + '".');
   l_strHostNames := '';
   // For the mean time, we're only updating one DNSdynamic.org host. We'll just do the first.
-  for l_i := 0 to m_acc.m_olHost.Count - 1 do begin
-    l_hst := m_acc.m_olHost.Items[l_i] as c_Host;
-    if (('1' <> l_hst.m_strDisabled) and (l_str <> l_hst.m_strIpAddress)) then begin
+  for l_i := 0 to m_acc.m_hosts.Count - 1 do begin
+    l_hst := m_acc.m_hosts.Items[l_i] as c_Host;
+    if (('1' <> l_hst.m_disabled) and (l_str <> l_hst.m_ip_address)) then begin
       if ('' <> l_strHostNames) then begin
         l_strHostNames := l_strHostNames + ',';
       end;
-      l_strHostNames := l_strHostNames + l_hst.m_strName;
+      l_strHostNames := l_strHostNames + l_hst.m_name;
       break;
     end;
   end;
@@ -491,7 +463,7 @@ begin
         if ('401' = Trim(ExtractWord(l_str))) then begin
           Log('Unauthorized. Check update server, username, and password.');
           Log('Disabling update.');
-          m_acc.m_strDisabled := '1';
+          m_acc.m_disabled := '1';
           Save();
           EnableTimer();
           exit;
@@ -505,57 +477,56 @@ begin
     end;
     l_bSave := false;
     l_str := m_strIpAddress;
-    for l_i := 0 to m_acc.m_olHost.Count - 1 do begin
-      l_hst := m_acc.m_olHost.Items[l_i] as c_Host;
-      if (('1' <> l_hst.m_strDisabled) and (l_str <>
-          l_hst.m_strIpAddress) and (l_sl.Count > 0)) then begin
+    for l_i := 0 to m_acc.m_hosts.Count - 1 do begin
+      l_hst := m_acc.m_hosts.Items[l_i] as c_Host;
+      if (('1' <> l_hst.m_disabled) and (l_str <> l_hst.m_ip_address) and (l_sl.Count > 0)) then begin
         l_strResultCode := l_sl.Strings[0];
         l_sl.Delete(0);
-        l_hst := m_acc.m_olHost.Items[l_i] as c_Host;
-        l_hst.m_strResultCode := l_strResultCode;
-        Log('Result status for ' + l_hst.m_strName + ': ' + l_strResultCode);
+        l_hst := m_acc.m_hosts.Items[l_i] as c_Host;
+        l_hst.m_result_code := l_strResultCode;
+        Log('Result status for ' + l_hst.m_name + ': ' + l_strResultCode);
 //Normal Result Codes
         if (GOOD = copy(l_strResultCode, 0, length(GOOD))) then begin // The update was successful.
           Log('The update was successful.');
           // if ok save change.
-          Log('Update IP address for ' + l_hst.m_strName + ' changed from "' +
-              l_hst.m_strIpAddress + '" to "' + l_str + '".');
-          l_hst.m_strIpAddress := l_str;
-					l_hst.m_strUpdated := FormatDateTime('', Now());
+          Log('Update IP address for ' + l_hst.m_name + ' changed from "' +
+              l_hst.m_ip_address + '" to "' + l_str + '".');
+          l_hst.m_ip_address := l_str;
+					l_hst.m_updated := FormatDateTime('', Now());
         end else if ('nochg' = l_strResultCode) then begin // No changes were made to the hostname(s). Continual updates with no changes will lead to blocked clients.
           Log('No changes were made to the hostname(s). Continual updates with no changes will lead to blocked clients.');
           // if nochange save change - ip must have been corrected externally.
-          Log('Update IP address for ' + l_hst.m_strName + ' changed from "' +
-              l_hst.m_strIpAddress + '" to "' + l_str + '".');
-          l_hst.m_strIpAddress := l_str;
-          l_hst.m_strUpdated := FormatDateTime('', Now());
+          Log('Update IP address for ' + l_hst.m_name + ' changed from "' +
+              l_hst.m_ip_address + '" to "' + l_str + '".');
+          l_hst.m_ip_address := l_str;
+          l_hst.m_updated := FormatDateTime('', Now());
         // TODO: The following error codes need to be changed from DNS Park error codes to DNSdynamic error codes.
 //Input Error Result Codes
         end else if ('nofqdn' = l_strResultCode) then begin // No valid FQDN (fully qualified domain name) was specified.
           Log('No valid FQDN (fully qualified domain name) was specified.');
           Log('Disabling host.');
-          l_hst.m_strDisabled := '1';
+          l_hst.m_disabled := '1';
         end else if ('nohost' = l_strResultCode) then begin // An invalid hostname was specified. This due to the fact the hostname has not been created in the system. Creating new host names via clients is not supported.
           Log('An invalid hostname was specified. This due to the fact the hostname has not been created in the system. Creating new host names via clients is not supported.');
           Log('Disabling host.');
-          l_hst.m_strDisabled := '1';
+          l_hst.m_disabled := '1';
         end else if ('abuse' = l_strResultCode) then begin // The hostname specified has been blocked for abuse.
           Log('The hostname specified has been blocked for abuse.');
           Log('Disabling host.');
-          l_hst.m_strDisabled := '1';
+          l_hst.m_disabled := '1';
 //System Error Result Codes
         end else if ('unauth' = l_strResultCode) then begin // The username specified is not authorized to update this hostname and domain.
           Log('The username specified is not authorized to update this hostname and domain.');
           Log('Disabling host.');
-          l_hst.m_strDisabled := '1';
+          l_hst.m_disabled := '1';
         end else if ('blocked' = l_strResultCode) then begin // The dynamic update client (specified by the user-agent) has been blocked from the system.
           Log('The dynamic update client (specified by the user-agent) has been blocked from the system.');
           Log('Disabling host.');
-          l_hst.m_strDisabled := '1';
+          l_hst.m_disabled := '1';
         end else if ('notdyn' = l_strResultCode) then begin // The hostname specified has not been marked as a dynamic host. Hosts must be marked as dynamic in the system in order to be updated via clients. This prevents unwanted or accidental updates.
           Log('The hostname specified has not been marked as a dynamic host. Hosts must be marked as dynamic in the system in order to be updated via clients. This prevents unwanted or accidental updates.');
           Log('Disabling host.');
-          l_hst.m_strDisabled := '1';
+          l_hst.m_disabled := '1';
         end else begin // Unknown result code. Turn off updating just in case.
           Log('Unknown result code.');
           Log('Disabling host.');
@@ -598,13 +569,13 @@ var
   l_strUsernamePassword: string;
 begin
   LogMethod('Writing to update IP address socket.');
-  l_strUsernamePassword := StringToBase64(m_acc.m_strUsername + ':' + m_acc.m_strPassword);
+  l_strUsernamePassword := StringToBase64(m_acc.m_username + ':' + m_acc.m_password);
   l_str :=
     'GET /api/?' +
     'hostname=' + m_strHostNames + '&' +
     'myip=' + m_strIpAddress + ' ' +
     'HTTP/1.0'#$D#$A +
-    'Host: ' + m_acc.m_strServer + #$D#$A +
+    'Host: ' + m_acc.m_server + #$D#$A +
     'Authorization: Basic ' + l_strUsernamePassword + #$D#$A +
     'User-Agent: ' + CLIENT_NAME + '/' + CLIENT_VERSION + ' ' + CLIENT_EMAIL + #$D#$A;
 	if ('1' = m_strLogUpdate) then begin
@@ -627,32 +598,32 @@ end;
 procedure TIpRightService.Save();
 var
   filestream: TFileStream;
-  l_xeRoot: c_XMLElement;
-  l_xe: c_XmlElement;
+  l_xeRoot: c_xml_element;
+  l_xe: c_xml_element;
 begin
   LogMethod('Saving.');
-  l_xeRoot := c_XMLElement.Create('IpRight');
+  l_xeRoot := c_xml_element.Create('IpRight');
   try
-    l_xe := l_xeRoot.AddElement('Log');
-		l_xe.SetAttribute('Enabled', m_strLog);
-    l_xe.SetAttribute('Methods', m_strLogMethod);
-    l_xe.SetAttribute('Options', m_strLogOption);
-    l_xe.SetAttribute('Checks', m_strLogCheck);
-    l_xe.SetAttribute('Updates', m_strLogUpdate);
-    l_xe := l_xeRoot.AddElement('Check');
-    l_xe.SetAttribute('Enabled', m_strCheckIp);
-    l_xe.SetAttribute('Tick', m_strCheckIpTick);
-    l_xe.SetAttribute('Internet', m_strCheckIpInternet);
-    l_xe.SetAttribute('Server', m_strCheckIpServer);
-    l_xe.SetAttribute('Port', m_strCheckIpPort);
-    l_xe.SetAttribute('Username', m_strCheckIpUsername);
-    l_xe.SetAttribute('Password', m_strCheckIpPassword);
-    l_xe.SetAttribute('Get', m_strCheckIpGet);
-    l_xe.SetAttribute('ExcludeIpAddresses', m_strCheckIpExcludeIpAddresses);
-    m_acc.Save(l_xeRoot);
+    l_xe := l_xeRoot.add_element('Log');
+		l_xe.set_attribute('Enabled', m_strLog);
+    l_xe.set_attribute('Methods', m_strLogMethod);
+    l_xe.set_attribute('Options', m_strLogOption);
+    l_xe.set_attribute('Checks', m_strLogCheck);
+    l_xe.set_attribute('Updates', m_strLogUpdate);
+    l_xe := l_xeRoot.add_element('Check');
+    l_xe.set_attribute('Enabled', m_strCheckIp);
+    l_xe.set_attribute('Tick', m_strCheckIpTick);
+    l_xe.set_attribute('Internet', m_strCheckIpInternet);
+    l_xe.set_attribute('Server', m_strCheckIpServer);
+    l_xe.set_attribute('Port', m_strCheckIpPort);
+    l_xe.set_attribute('Username', m_strCheckIpUsername);
+    l_xe.set_attribute('Password', m_strCheckIpPassword);
+    l_xe.set_attribute('Get', m_strCheckIpGet);
+    l_xe.set_attribute('ExcludeIpAddresses', m_strCheckIpExcludeIpAddresses);
+    m_acc.save(l_xeRoot);
     filestream := TFileStream.Create(ExtractFilePath(ParamStr(0)) + XML_FILENAME, (fmCreate or fmShareDenyWrite));
     try
-      l_xeRoot.SaveToStream(filestream, '');
+      l_xeRoot.save_to_stream(filestream, '');
     finally
       FreeAndNil(filestream);
     end;
@@ -683,7 +654,7 @@ end;
 procedure TIpRightService.UpdateIpAddress();
 begin
   LogMethod('Updating IP address.');
-  if ('1' = m_acc.m_strDisabled) then begin
+  if ('1' = m_acc.m_disabled) then begin
     Log('Updating is disabled.');
     EnableTimer();
     exit;
@@ -692,8 +663,8 @@ begin
   FreeAndNil(m_csUpdateIpAddress);
   m_strUpdateIpReply := '';
   m_csUpdateIpAddress := TClientSocket.Create(nil);
-  m_csUpdateIpAddress.Host := m_acc.m_strServer;
-  m_csUpdateIpAddress.Port := StrToIntDef(m_acc.m_strPort, 80);
+  m_csUpdateIpAddress.Host := m_acc.m_server;
+  m_csUpdateIpAddress.Port := StrToIntDef(m_acc.m_port, 80);
   m_csUpdateIpAddress.OnWrite := m_csUpdateIpAddressWrite;
   m_csUpdateIpAddress.OnRead := m_csUpdateIpAddressRead;
   m_csUpdateIpAddress.OnDisconnect := m_csUpdateIpAddressDisconnect;
@@ -707,27 +678,6 @@ begin
   FreeAndNil(m_acc);
 end;
 
-procedure c_Host.Load(const p_xe: c_XmlElement);
-begin
-  m_strDisabled := p_xe.GetAttribute('Disabled');
-  m_strName := p_xe.GetAttribute('Name');
-  m_strIpAddress := p_xe.GetAttribute('IpAddress');
-  m_strUpdated := p_xe.GetAttribute('Updated');
-  m_strResultCode := p_xe.GetAttribute('ResultCode');
-end;
-
-procedure c_Host.Save(const p_xe: c_XmlElement);
-var
-  l_xe: c_XmlElement;
-begin
-  l_xe := p_xe.AddElement('Host');
-  l_xe.SetAttribute('Disabled', m_strDisabled);
-  l_xe.SetAttribute('Name', m_strName);
-  l_xe.SetAttribute('IpAddress', m_strIpAddress);
-  l_xe.SetAttribute('Updated', m_strUpdated);
-  l_xe.SetAttribute('ResultCode', m_strResultCode);
-end;
-
 procedure TIpRightService.LogMethod(const p_str: string);
 begin
   if ('1' = m_strLogMethod) then begin
@@ -735,64 +685,10 @@ begin
   end;
 end;
 
-procedure TIpRightService.LogOptions(const p_xe: c_XmlElement);
+procedure TIpRightService.LogOptions(const p_xe: c_xml_element);
 begin
   if ('1' = m_strLogOption) then begin
-    Log(p_xe.AsString);
-  end;
-end;
-
-constructor c_Account.Create();
-begin
-  m_olHost := TObjectList.Create();
-end;
-
-destructor c_Account.Destroy();
-begin
-  FreeAndNil(m_olHost);
-  inherited;
-end;
-
-procedure c_Account.Load(const p_xe: c_XmlElement);
-var
-  l_i: integer;
-  l_xe: c_XmlElement;
-  l_hst: c_Host;
-begin
-  m_strDisabled := p_xe.GetAttribute('Disabled');
-  m_strServer := 'www.dnsdynamic.org';
-  m_strPort := '80';
-  m_strUsername := p_xe.GetAttribute('Username');
-  m_strPassword := p_xe.GetAttribute('Password');
-  for l_i := 0 to p_xe.m_strlElement.Count - 1 do begin
-    l_xe := p_xe.GetElement(l_i);
-    if ('Host' = l_xe.m_strName) then begin
-      l_hst := c_Host.Create();
-      try
-        l_hst.Load(l_xe);
-        m_olHost.Add(l_hst);
-        // We'll only be updating one host for DNSdynamic for the mean time.
-        break;
-      except
-        FreeAndNil(l_hst);
-      end;
-    end;
-  end;
-end;
-
-procedure c_Account.Save(const p_xe: c_XmlElement);
-var
-  l_i: integer;
-  l_xe: c_XmlElement;
-begin
-  l_xe := p_xe.AddElement('Account');
-  l_xe.SetAttribute('Disabled', m_strDisabled);
-  l_xe.SetAttribute('Username', m_strUsername);
-  l_xe.SetAttribute('Password', m_strPassword);
-  for l_i := 0 to m_olHost.Count - 1 do begin
-    (m_olHost.Items[l_i] as c_Host).Save(l_xe);
-    // We'll only be updating one host for DNSdynamic for the mean time.
-    break;
+    Log(p_xe.as_string());
   end;
 end;
 
@@ -855,7 +751,7 @@ const
 	TAIL = #$D#$A#$D#$A;
 	TAIL_LENGTH = length(TAIL);
 var
-  hosts: string;
+  //hosts: string;
   response: string;
 	l_str: string;
 	l_i: integer;
@@ -869,29 +765,6 @@ var
 	l_strlHostUpdated: TStringList;
 	l_strlHostResult: TStringList;
 	l_strGet: string;
-
-  function Checkbox(p_label: string; p_name: string; p_value: boolean): string;
-  var
-    checked: string;
-  begin
-    if (p_value) then begin
-      checked := 'checked="checked" ';
-    end else begin
-      checked := '';
-    end;
-    result := '<label for="' + p_name + '">' + p_label + '</label><input ' + checked + 'id="' + p_name + '" name="' + p_name + '" type="checkbox" />';
-  end;
-
-  function Text(p_label: string; p_name: string; p_value: string): string;
-  begin
-    result := '<label for="' + p_name + '">' + p_label + '</label><input id="' + p_name + '" name="' + p_name + '" type="text" value="' + p_value + '" />';
-  end;
-
-  function Password(p_label: string; p_name: string; p_value: string): string;
-  begin
-    result := '<label for="' + p_name + '">' + p_label + '</label><input id="' + p_name + '" name="' + p_name + '" type="password" value="' + p_value + '" />';
-  end;
-
 begin
 	l_str := '';
 	repeat
@@ -921,7 +794,7 @@ begin
             m_strLogUpdate := '0';
             m_strCheckIp := '0';
             m_strCheckIpInternet := '0';
-            m_acc.m_strDisabled := '1';
+            m_acc.m_disabled := '1';
 
             l_strlHostEnabled := nil;
             l_strlHostName := nil;
@@ -936,13 +809,13 @@ begin
               l_strlHostUpdated := TStringList.Create();
               l_strlHostResult := TStringList.Create();
 
-              for l_i := 0 to m_acc.m_olHost.Count - 1 do begin
-                l_hst := m_acc.m_olHost.Items[l_i] as c_Host;
+              for l_i := 0 to m_acc.m_hosts.Count - 1 do begin
+                l_hst := m_acc.m_hosts.Items[l_i] as c_Host;
                 l_strlHostEnabled.Add('0');
-                l_strlHostName.Add(l_hst.m_strName);
-                l_strlHostAddress.Add(l_hst.m_strIpAddress);
-                l_strlHostUpdated.Add(l_hst.m_strUpdated);
-                l_strlHostResult.Add(l_hst.m_strResultCode);
+                l_strlHostName.Add(l_hst.m_name);
+                l_strlHostAddress.Add(l_hst.m_ip_address);
+                l_strlHostUpdated.Add(l_hst.m_updated);
+                l_strlHostResult.Add(l_hst.m_result_code);
               end;
 
               while ('' <> l_str) do begin
@@ -996,11 +869,11 @@ begin
                 end else if ('check_exclude' = l_strName) then begin
                   m_strCheckIpExcludeIpAddresses := l_strValue;
                 end else if (('account_enabled' = l_strName) and ('on' = l_strValue)) then begin
-                  m_acc.m_strDisabled := '0';
+                  m_acc.m_disabled := '0';
                 end else if ('account_username' = l_strName) then begin
-                  m_acc.m_strUsername := l_strValue;
+                  m_acc.m_username := l_strValue;
                 end else if ('account_password' = l_strName) then begin
-                  m_acc.m_strPassword := l_strValue;
+                  m_acc.m_password := l_strValue;
                 end else if (HOST = copy(l_strName, 1, HOST_LENGTH)) then begin
                   delete(l_strName, 1, HOST_LENGTH);
                   l_i := pos('_', l_strName);
@@ -1026,30 +899,30 @@ begin
               end;
 
               for l_i := 0 to l_strlHostEnabled.Count - 1 do begin
-                if (l_i < m_acc.m_olHost.Count) then begin
-                  l_hst := m_acc.m_olHost.Items[l_i] as c_Host;
+                if (l_i < m_acc.m_hosts.Count) then begin
+                  l_hst := m_acc.m_hosts.Items[l_i] as c_Host;
                   if ('1' = l_strlHostEnabled.Strings[l_i]) then begin
-                    l_hst.m_strDisabled := '0';
+                    l_hst.m_disabled := '0';
                   end else begin
-                    l_hst.m_strDisabled := '1';
+                    l_hst.m_disabled := '1';
                   end;
-                  l_hst.m_strName := l_strlHostName.Strings[l_i];
-                  l_hst.m_strIpAddress := l_strlHostAddress.Strings[l_i];
-                  l_hst.m_strUpdated := l_strlHostUpdated.Strings[l_i];
-                  l_hst.m_strResultCode := l_strlHostResult.Strings[l_i];
+                  l_hst.m_name := l_strlHostName.Strings[l_i];
+                  l_hst.m_ip_address := l_strlHostAddress.Strings[l_i];
+                  l_hst.m_updated := l_strlHostUpdated.Strings[l_i];
+                  l_hst.m_result_code := l_strlHostResult.Strings[l_i];
                 end else begin
                   l_hst := c_Host.Create();
                   try
                     if ('1' = l_strlHostEnabled.Strings[l_i]) then begin
-                      l_hst.m_strDisabled := '0';
+                      l_hst.m_disabled := '0';
                     end else begin
-                      l_hst.m_strDisabled := '1';
+                      l_hst.m_disabled := '1';
                     end;
-                    l_hst.m_strName := l_strlHostName.Strings[l_i];
-                    l_hst.m_strIpAddress := l_strlHostAddress.Strings[l_i];
-                    l_hst.m_strUpdated := l_strlHostUpdated.Strings[l_i];
-                    l_hst.m_strResultCode := l_strlHostResult.Strings[l_i];
-                    m_acc.m_olHost.Add(l_hst);
+                    l_hst.m_name := l_strlHostName.Strings[l_i];
+                    l_hst.m_ip_address := l_strlHostAddress.Strings[l_i];
+                    l_hst.m_updated := l_strlHostUpdated.Strings[l_i];
+                    l_hst.m_result_code := l_strlHostResult.Strings[l_i];
+                    m_acc.m_hosts.Add(l_hst);
                   except
                     FreeAndNil(l_hst);
                     raise;
@@ -1057,10 +930,10 @@ begin
                 end;
               end;
 
-              for l_i := m_acc.m_olHost.Count - 1 downto 0 do begin
-                l_hst := m_acc.m_olHost.Items[l_i] as c_Host;
-                if ('' = l_hst.m_strName) then begin
-                  m_acc.m_olHost.Delete(l_i);
+              for l_i := m_acc.m_hosts.Count - 1 downto 0 do begin
+                l_hst := m_acc.m_hosts.Items[l_i] as c_Host;
+                if ('' = l_hst.m_name) then begin
+                  m_acc.m_hosts.Delete(l_i);
                 end;
               end;
 
@@ -1076,28 +949,6 @@ begin
 
         end;
       end;
-    end;
-    // For the time being, we'll only try to update one DNSdynamic.org host so only display one host in the UI.
-    hosts := '';
-    for l_i := 0 to m_acc.m_olHost.Count - 1 do begin
-      l_hst := m_acc.m_olHost.Items[l_i] as c_Host;
-      hosts :=
-        hosts +
-        '            <li>' + Checkbox('Host', 'host_' + IntToStr(l_i) + '_enabled', '1' <> l_hst.m_strDisabled) + #$D#$A +
-        '              <ul>' + #$D#$A +
-        '                <li>' + Text('Name', 'host_' + IntToStr(l_i) + '_name', l_hst.m_strName) + '</li>' + #$D#$A +
-        '              </ul>' + #$D#$A +
-        '            </li>' + #$D#$A;
-      break;
-    end;
-    if (m_acc.m_olHost.Count = 0) then begin
-      hosts :=
-        hosts +
-        '            <li>' + Checkbox('Host', 'host_' + IntToStr(m_acc.m_olHost.Count) + '_enabled', False) + #$D#$A +
-        '              <ul>' + #$D#$A +
-        '                <li>' + Text('Name', 'host_' + IntToStr(m_acc.m_olHost.Count) + '_name', '') + '</li>' + #$D#$A +
-        '              </ul>' + #$D#$A +
-        '            </li>' + #$D#$A;
     end;
   response :=
     '<!DOCTYPE html>' + #$D#$A +
@@ -1216,33 +1067,27 @@ begin
     '      <div class="content">' + #$D#$A +
     '        <form action="commit.html" method="get">' + #$D#$A +
     '          <ul>' + #$D#$A +
-    '            <li>' + Checkbox('Log', 'log_enabled', '1' = m_strLog) + #$D#$A +
+    '            <li>' + c_html.input_checkbox('Log', 'log_enabled', '1' = m_strLog) + #$D#$A +
     '              <ul>' + #$D#$A +
-    '                <li>' + Checkbox('Log Checks', 'log_checks', '1' = m_strLogCheck) + '</li>' + #$D#$A +
-    '                <li>' + Checkbox('Log Methods', 'log_methods', '1' = m_strLogMethod) + '</li>' + #$D#$A +
-    '                <li>' + Checkbox('Log Options', 'log_options', '1' = m_strLogOption) + '</li>' + #$D#$A +
-    '                <li>' + Checkbox('Log Updates', 'log_updates', '1' = m_strLogUpdate) + '</li>' + #$D#$A +
+    '                <li>' + c_html.input_checkbox('Log Checks', 'log_checks', '1' = m_strLogCheck) + '</li>' + #$D#$A +
+    '                <li>' + c_html.input_checkbox('Log Methods', 'log_methods', '1' = m_strLogMethod) + '</li>' + #$D#$A +
+    '                <li>' + c_html.input_checkbox('Log Options', 'log_options', '1' = m_strLogOption) + '</li>' + #$D#$A +
+    '                <li>' + c_html.input_checkbox('Log Updates', 'log_updates', '1' = m_strLogUpdate) + '</li>' + #$D#$A +
     '              </ul>' + #$D#$A +
     '            </li>' + #$D#$A +
-    '            <li>' + Checkbox('Checks', 'check_enabled', '1' = m_strCheckIp) + #$D#$A +
+    '            <li>' + c_html.input_checkbox('Checks', 'check_enabled', '1' = m_strCheckIp) + #$D#$A +
     '              <ul>' + #$D#$A +
-    '               <li>' + Text('Interval In Seconds', 'check_tick', m_strCheckIpTick) + '</li>' + #$D#$A +
-    '               <li>' + Checkbox('Internet', 'check_internet', '1' = m_strCheckIpInternet) + '</li>' + #$D#$A +
-    '               <li>' + Text('Server', 'check_server', m_strCheckIpServer) + '</li>' + #$D#$A +
-    '               <li>' + Text('Port', 'check_port', m_strCheckIpPort) + '</li>' + #$D#$A +
-    '               <li>' + Text('Username', 'check_username', m_strCheckIpUsername) + '</li>' + #$D#$A +
-    '               <li>' + Password('Password', 'check_password', m_strCheckIpPassword) + '</li>' + #$D#$A +
-    '               <li>' + Text('Get', 'check_get', m_strCheckIpGet) + '</li>' + #$D#$A +
-    '               <li>' + Text('Exclude', 'check_exclude', m_strCheckIpExcludeIpAddresses) + '</li>' + #$D#$A +
+    '               <li>' + c_html.input_text('Interval In Seconds', 'check_tick', m_strCheckIpTick) + '</li>' + #$D#$A +
+    '               <li>' + c_html.input_checkbox('Internet', 'check_internet', '1' = m_strCheckIpInternet) + '</li>' + #$D#$A +
+    '               <li>' + c_html.input_text('Server', 'check_server', m_strCheckIpServer) + '</li>' + #$D#$A +
+    '               <li>' + c_html.input_text('Port', 'check_port', m_strCheckIpPort) + '</li>' + #$D#$A +
+    '               <li>' + c_html.input_text('Username', 'check_username', m_strCheckIpUsername) + '</li>' + #$D#$A +
+    '               <li>' + c_html.input_password('Password', 'check_password', m_strCheckIpPassword) + '</li>' + #$D#$A +
+    '               <li>' + c_html.input_text('Get', 'check_get', m_strCheckIpGet) + '</li>' + #$D#$A +
+    '               <li>' + c_html.input_text('Exclude', 'check_exclude', m_strCheckIpExcludeIpAddresses) + '</li>' + #$D#$A +
     '              </ul>' + #$D#$A +
     '            </li>' + #$D#$A +
-    '            <li>' + Checkbox('DNSdynamic (testing)', 'account_enabled', '1' <> m_acc.m_strDisabled) + #$D#$A +
-    '              <ul>' + #$D#$A +
-    '                <li>' + Text('Signin ID', 'account_username', m_acc.m_strUsername) + '</li>' + #$D#$A +
-    '                <li>' + Password('Password', 'account_password', m_acc.m_strPassword) + '</li>' + #$D#$A +
-    '              </ul>' + #$D#$A +
-    '            </li>' + #$D#$A +
-    hosts +
+    m_acc.ui_html() +
     '          </ul>' + #$D#$A +
     '          <input type="submit">' + #$D#$A +
     '        </form>' + #$D#$A +

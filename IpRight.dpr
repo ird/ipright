@@ -6,7 +6,10 @@ uses
   SvcMgr,
   IpRightServiceUnit in 'IpRightServiceUnit.pas' {IpRightService: TService},
   UtilityUnit in 'UtilityUnit.pas',
-  XmlUnit in 'XmlUnit.pas';
+  XmlUnit in 'XmlUnit.pas',
+  AccountUnit in 'AccountUnit.pas',
+  HostUnit in 'HostUnit.pas',
+  HtmlUnit in 'HtmlUnit.pas';
 
 {$R *.RES}
 

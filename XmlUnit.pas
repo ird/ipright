@@ -6,90 +6,38 @@ uses
   Classes;
 
 type
-  c_XmlElement = class(TObject)
+  c_xml_element = class(TObject)
   private
-
-    {: Inserts a "\" in front of any """. }
-    class function Escape(
-      const p_str: string
-    ): string;
-
-    {: Deletes a "\" in front of andy "\"". }
-    class function Epacse(
-      const p_str: string
-    ): string;
-
+    // Inserts a "\" in front of any """.
+    class function escape(const p_value: string): string;
+    // Deletes a "\" in front of any "\"".
+    class function epacse(const p_value: string): string;
   public
-
-    m_strName: string;
-    m_strValue: string;
-    m_strlAttribute: TStringList;
-    m_strlElement: TStringList;
-
+    m_name: string;
+    m_value: string;
+    m_attributes: TStringList;
+    m_elements: TStringList;
   private
-
-    function LoadElement(
-    ): boolean;
-
-    procedure WriteToStream(
-      const p_stm: TStream;
-      const p_str: string
-    );
-
+    function load_element(): boolean;
+    procedure write_to_stream(const p_stream: TStream; const p_value: string);
   public
-
-    function AddElement(
-      const p_strName: string
-    ): c_XmlElement;
-
-		procedure SetAttribute(
-      const p_strName: string;
-      const p_strValue: string
-    );
-
-    function GetAttribute(
-      const p_strName: string
-    ): string;
-
-    function GetElement(
-      const p_i: integer
-    ): c_XmlElement;
-
-    constructor Create(
-      const p_strName: string
-    );
-
-    destructor Destroy(
-    ); override;
-
-    procedure SaveToStream(
-      const p_stm: TStream;
-      const p_strIndent: string
-    );
-
-    procedure LoadFromStream(
-      const p_stm: TStream
-    );
-
-    function AsString(
-    ): string;
-
+    function add_element(const p_name: string): c_xml_element;
+		procedure set_attribute(const p_name: string; const p_value: string);
+    function get_attribute(const p_name: string): string;
+    function get_element(const p_i: integer): c_xml_element;
+    constructor create(const p_name: string);
+    destructor destroy(); override;
+    procedure save_to_stream(const p_stream: TStream; const p_indent: string);
+    procedure load_from_stream(const p_stm: TStream);
+    function as_string(): string;
   end;
 
-  c_XmlAttribute = class(TObject)
+  c_xml_attribute = class(TObject)
   private
-
-    m_strValue: string;
-
+    m_value: string;
   public
-
-    function GetValue(
-    ): string;
-
-    procedure SetValue(
-      const p_str: string
-    );
-
+    function get_value(): string;
+    procedure set_value(const p_value: string);
   end;
 
 implementation
@@ -102,14 +50,12 @@ var
   u_ch: char;
   u_str: string;
 
-function QryCharacter(
-): char;
+function QryCharacter(): char;
 begin
   result := u_ch;
 end;
 
-function GetCharacter(
-): char;
+function GetCharacter(): char;
 begin
   result := QryCharacter();
   u_ch := #$00;
@@ -118,47 +64,38 @@ begin
   end;
 end;
 
-function EOF(
-): boolean;
+function EOF(): boolean;
 begin
   result := (#$00 = QryCharacter());
 end;
 
-procedure Bing(
-);
+procedure Bing();
 begin
   u_str := u_str + GetCharacter();
 end;
 
-function QryWord(
-): string;
+function QryWord(): string;
 begin
   result := u_str;
 end;
 
-function QryQuote(
-): boolean;
+function QryQuote(): boolean;
 begin
   result := ((length(QryWord()) > 0) and ('"' = QryWord()[1]));
 end;
 
-function QryAlphaNumeric(
-): boolean;
+function QryAlphaNumeric(): boolean;
 begin
-  result := ((length(QryWord()) > 0) and (QryWord()[1] in ['_', 'A'..'Z', 'a'..
-      'z']));
+  result := ((length(QryWord()) > 0) and (QryWord()[1] in ['_', 'A'..'Z', 'a'..'z']));
 end;
 
-function GetWord(
-): string;
+function GetWord(): string;
 begin
   result := QryWord();
   u_str := '';
-
   while (QryCharacter() in [#$0A, #$0D, ' ']) do begin
     GetCharacter();
   end;
-
   if ('<' = QryCharacter()) then begin
     Bing();
     if ('/' <> QryCharacter()) then begin
@@ -167,7 +104,6 @@ begin
     Bing();
     exit;
   end;
-
   if ('/' = QryCharacter()) then begin
     Bing();
     if ('>' <> QryCharacter()) then begin
@@ -176,17 +112,14 @@ begin
     Bing();
     exit
   end;
-
   if ('>' = QryCharacter()) then begin
     Bing();
     exit;
   end;
-
   if ('=' = QryCharacter()) then begin
     Bing();
     exit;
   end;
-
   if ('"' = QryCharacter()) then begin
     repeat
       Bing();
@@ -197,104 +130,83 @@ begin
     Bing();
     exit;
   end;
-
   if (QryCharacter() in ['_', 'A'..'Z', 'a'..'z']) then begin
     repeat
       Bing();
     until (not (QryCharacter() in ['_', '0'..'9', 'A'..'Z', 'a'..'z']));
     exit;
   end;
-
   if (QryCharacter() in ['0'..'9']) then begin
     repeat
       Bing();
     until (not (QryCharacter() in ['0'..'9']));
     exit;
   end;
-
 end;
 
-function c_XmlElement.AddElement(
-  const p_strName: string
-): c_XmlElement;
+function c_xml_element.add_element(const p_name: string): c_xml_element;
 begin
-  result := c_XmlElement.Create(p_strName);
+  result := c_xml_element.create(p_name);
   try
-    m_strlElement.AddObject(p_strName, result);
+    m_elements.AddObject(p_name, result);
   except
     FreeAndNil(result);
     raise;
   end;
 end;
 
-constructor c_XmlElement.Create(
-  const p_strName: string
-);
+constructor c_xml_element.create(const p_name: string);
 begin
-  m_strName := p_strName;
-  m_strlAttribute := TStringList.Create();
-//  m_strlAttribute.Sorted := true;
-  m_strlElement := TStringList.Create();
-  m_strlElement.Duplicates := dupAccept;
-//  m_strlElement.Sorted := true;
+  m_name := p_name;
+  m_attributes := TStringList.Create();
+  m_elements := TStringList.Create();
+  m_elements.Duplicates := dupAccept;
 end;
 
-destructor c_XmlElement.Destroy(
-);
+destructor c_xml_element.destroy();
 var
-  l_i: integer;
-  l_strl: TStringList;
+  i: integer;
 begin
-  l_strl := m_strlElement;
-  for l_i := 0 to l_strl.Count - 1 do begin
-    l_strl.Objects[l_i].Free();
+  for i := 0 to m_elements.Count - 1 do begin
+    m_elements.Objects[i].Free();
+    m_elements.Objects[i] := nil;
   end;
-  FreeAndNil(m_strlElement);
-  l_strl := m_strlAttribute;
-  for l_i := 0 to l_strl.Count - 1 do begin
-    l_strl.Objects[l_i].Free();
+  FreeAndNil(m_elements);
+  for i := 0 to m_attributes.Count - 1 do begin
+    m_attributes.Objects[i].Free();
+    m_attributes.Objects[i] := nil;
   end;
-  FreeAndNil(m_strlAttribute);
+  FreeAndNil(m_attributes);
   inherited;
 end;
 
-function c_XmlElement.GetAttribute(
-  const p_strName: string
-): string;
+function c_xml_element.get_attribute(const p_name: string): string;
 var
-  l_i: integer;
-  l_strl: TStringList;
+  i: integer;
 begin
-  l_strl := m_strlAttribute;
-  l_i := l_strl.IndexOf(p_strName);
-  if (- 1 = l_i) then begin
+  i := m_attributes.IndexOf(p_name);
+  if (i = -1) then begin
     result := '';
     exit;
   end;
-  result := c_XmlAttribute(l_strl.Objects[l_i]).GetValue();
+  result := c_xml_attribute(m_attributes.Objects[i]).get_value();
 end;
 
-function c_XmlElement.GetElement(
-  const p_i: integer
-): c_XmlElement;
-var
-  l_strl: TStringList;
+function c_xml_element.get_element(const p_i: integer): c_xml_element;
 begin
-  l_strl := m_strlElement;
-  if ((p_i < 0) or (p_i >= l_strl.Count)) then begin
+  if ((p_i < 0) or (p_i >= m_elements.Count)) then begin
     result := nil;
     exit;
   end;
-  result := c_XmlElement(l_strl.Objects[p_i]);
+  result := c_xml_element(m_elements.Objects[p_i]);
 end;
 
-function c_XmlElement.LoadElement(
-): boolean;
+function c_xml_element.load_element(): boolean;
 var
-  l_strElementName: string;
-  l_strAttributeName: string;
-  l_xe: c_XmlElement;
-  l_str: string;
+  element_name: string;
+  attribute_name: string;
+  xml_element: c_xml_element;
+  s: string;
 begin
   result := false;
   if ('<' <> QryWord()) then begin
@@ -304,11 +216,10 @@ begin
   if (not QryAlphaNumeric()) then begin
     exit;
   end;
-  l_strElementName := GetWord();
-  m_strName := l_strElementName;
-
+  element_name := GetWord();
+  m_name := element_name;
   while (QryAlphaNumeric()) do begin
-    l_strAttributeName := GetWord();
+    attribute_name := GetWord();
     if ('=' <> QryWord()) then begin
       exit;
     end;
@@ -316,10 +227,10 @@ begin
     if (not QryQuote()) then begin
       exit;
     end;
-    l_str := GetWord();
-    delete(l_str, 1, 1);
-    delete(l_str, length(l_str), 1);
-    SetAttribute(l_strAttributeName, Epacse(l_str));
+    s := GetWord();
+    delete(s, 1, 1);
+    delete(s, length(s), 1);
+    set_attribute(attribute_name, Epacse(s));
   end;
   if ('/>' = QryWord()) then begin
     GetWord();
@@ -330,12 +241,10 @@ begin
     exit;
   end;
   GetWord();
-
-  // either we get the value here are an open tag.
-
+  // either we get the value here or an open tag.
   while ('<' = QryWord()) do begin
-    l_xe := AddElement('');
-    if (not l_xe.LoadElement()) then begin
+    xml_element := add_element('');
+    if (not xml_element.load_element()) then begin
       exit;
     end;
   end;
@@ -343,7 +252,7 @@ begin
     exit;
   end;
   GetWord();
-  if (QryWord() <> l_strElementName) then begin
+  if (QryWord() <> element_name) then begin
     exit;
   end;
   GetWord();
@@ -354,162 +263,135 @@ begin
   result := true;
 end;
 
-procedure c_XmlElement.LoadFromStream(
-  const p_stm: TStream
-);
+procedure c_xml_element.load_from_stream(const p_stm: TStream);
 begin
   u_st := p_stm;
   GetCharacter();
   GetWord();
-  LoadElement();
+  load_element();
 end;
 
-procedure c_XmlElement.SaveToStream(
-  const p_stm: TStream;
-  const p_strIndent: string
-);
+procedure c_xml_element.save_to_stream(const p_stream: TStream; const p_indent: string);
 var
   l_i: integer;
 begin
-  WriteToStream(p_stm, p_strIndent);
-  WriteToStream(p_stm, '<');
-  WriteToStream(p_stm, m_strName);
-  for l_i := 0 to m_strlAttribute.Count - 1 do begin
-    WriteToStream(p_stm, ' ');
-    WriteToStream(p_stm, m_strlAttribute.Strings[l_i]);
-    WriteToStream(p_stm, '="');
-    WriteToStream(p_stm, Escape(c_XMLAttribute(m_strlAttribute.Objects[
-        l_i]).GetValue()));
-    WriteToStream(p_stm, '"');
+  write_to_stream(p_stream, p_indent);
+  write_to_stream(p_stream, '<');
+  write_to_stream(p_stream, m_name);
+  for l_i := 0 to m_attributes.Count - 1 do begin
+    write_to_stream(p_stream, ' ');
+    write_to_stream(p_stream, m_attributes.Strings[l_i]);
+    write_to_stream(p_stream, '="');
+    write_to_stream(p_stream, escape(c_xml_attribute(m_attributes.Objects[l_i]).get_value()));
+    write_to_stream(p_stream, '"');
   end;
-  if (0 = m_strlElement.Count) then begin
-    WriteToStream(p_stm, ' />'#$D#$A);
+  if (0 = m_elements.Count) then begin
+    write_to_stream(p_stream, ' />'#$D#$A);
     exit;
   end;
-  WriteToStream(p_stm, '>'#$D#$A);
-  for l_i := 0 to m_strlElement.Count - 1 do begin
-    c_XmlElement(m_strlElement.Objects[l_i]).SaveToStream(p_stm, p_strIndent +
-        '  ');
+  write_to_stream(p_stream, '>'#$D#$A);
+  for l_i := 0 to m_elements.Count - 1 do begin
+    c_xml_element(m_elements.Objects[l_i]).save_to_stream(p_stream, p_indent + '  ');
   end;
-  WriteToStream(p_stm, p_strIndent);
-  WriteToStream(p_stm, '</');
-  WriteToStream(p_stm, m_strName);
-  WriteToStream(p_stm, '>'#$D#$A);
+  write_to_stream(p_stream, p_indent);
+  write_to_stream(p_stream, '</');
+  write_to_stream(p_stream, m_name);
+  write_to_stream(p_stream, '>'#$D#$A);
 end;
 
-procedure c_XmlElement.SetAttribute(
-  const p_strName: string;
-  const p_strValue: string
-);
+procedure c_xml_element.set_attribute(const p_name: string; const p_value: string);
 var
-  l_i: integer;
-  l_strl: TStringList;
+  i: integer;
 begin
-  l_strl := m_strlAttribute;
-  l_i := l_strl.IndexOf(p_strName);
-  if (- 1 = l_i) then begin
-    l_i := l_strl.AddObject(p_strName, c_XmlAttribute.Create());
+  i := m_attributes.IndexOf(p_name);
+  if (i = -1) then begin
+    i := m_attributes.AddObject(p_name, c_xml_attribute.Create());
   end;
-  c_XmlAttribute(l_strl.Objects[l_i]).SetValue(p_strValue);
+  c_xml_attribute(m_attributes.Objects[i]).set_value(p_value);
 end;
 
-function c_XmlAttribute.GetValue(
-): string;
+function c_xml_attribute.get_value(): string;
 begin
-  result := m_strValue;
+  result := m_value;
 end;
 
-procedure c_XmlAttribute.SetValue(
-  const p_str: string
-);
+procedure c_xml_attribute.set_value(const p_value: string);
 begin
-  m_strValue := p_str;
+  m_value := p_value;
 end;
 
-procedure c_XmlElement.WriteToStream(
-  const p_stm: TStream;
-  const p_str: string
-);
+procedure c_xml_element.write_to_stream(const p_stream: TStream; const p_value: string);
 begin
-  p_stm.WriteBuffer(pchar(p_str)^, length(p_str));
+  p_stream.WriteBuffer(pchar(p_value)^, length(p_value));
 end;
 
-class function c_XmlElement.Escape(
-  const p_str: string
-): string;
+class function c_xml_element.escape(const p_value: string): string;
 var
-  l_i: integer;
-  l_j: integer;
-  l_c: cardinal; // Count of characters in string.
-  l_d: cardinal; // Count of """'s in string.
+  i: integer;
+  j: integer;
+  c: cardinal; // Count of characters in string.
+  d: cardinal; // Count of """'s in string.
 begin
-
   {: Find out how many """'s and "%"'s we need to escape. }
-  l_c := length(p_str);
-  l_d := 0;
-  for l_i := 1 to l_c do begin
-    if (p_str[l_i] in ['%', '"', '<', '>', '&']) then begin
-      inc(l_d);
+  c := length(p_value);
+  d := 0;
+  for i := 1 to c do begin
+    if (p_value[i] in ['%', '"', '<', '>', '&']) then begin
+      inc(d);
     end;
   end;
-
   {: Make our resulting string the size of the original string plus the number
   of extra characters we need, which is two for each """ and "%". }
-  setlength(result, l_c + l_d * 2);
-
+  setlength(result, c + d * 2);
   {: Copy the original string to the resulting string adding "%xx"'s where
   needed. }
-  l_j := 1;
-  for l_i := 1 to l_c do begin
-    if ('"' = p_str[l_i]) then begin
-      result[l_j] := '%';
-      inc(l_j);
-      result[l_j] := '2';
-      inc(l_j);
-      result[l_j] := '2';
-      inc(l_j);
-    end else if ('%' = p_str[l_i]) then begin
-      result[l_j] := '%';
-      inc(l_j);
-      result[l_j] := '2';
-      inc(l_j);
-      result[l_j] := '5';
-      inc(l_j);
-    end else if ('<' = p_str[l_i]) then begin
-      result[l_j] := '%';
-      inc(l_j);
-      result[l_j] := '3';
-      inc(l_j);
-      result[l_j] := 'C';
-      inc(l_j);
-    end else if ('>' = p_str[l_i]) then begin
-      result[l_j] := '%';
-      inc(l_j);
-      result[l_j] := '3';
-      inc(l_j);
-      result[l_j] := 'E';
-      inc(l_j);
-    end else if ('&' = p_str[l_i]) then begin
-      result[l_j] := '%';
-      inc(l_j);
-      result[l_j] := '2';
-      inc(l_j);
-      result[l_j] := '6';
-      inc(l_j);
+  j := 1;
+  for i := 1 to c do begin
+    if ('"' = p_value[i]) then begin
+      result[j] := '%';
+      inc(j);
+      result[j] := '2';
+      inc(j);
+      result[j] := '2';
+      inc(j);
+    end else if ('%' = p_value[i]) then begin
+      result[j] := '%';
+      inc(j);
+      result[j] := '2';
+      inc(j);
+      result[j] := '5';
+      inc(j);
+    end else if ('<' = p_value[i]) then begin
+      result[j] := '%';
+      inc(j);
+      result[j] := '3';
+      inc(j);
+      result[j] := 'C';
+      inc(j);
+    end else if ('>' = p_value[i]) then begin
+      result[j] := '%';
+      inc(j);
+      result[j] := '3';
+      inc(j);
+      result[j] := 'E';
+      inc(j);
+    end else if ('&' = p_value[i]) then begin
+      result[j] := '%';
+      inc(j);
+      result[j] := '2';
+      inc(j);
+      result[j] := '6';
+      inc(j);
     end else begin
-      result[l_j] := p_str[l_i];
-      inc(l_j);
+      result[j] := p_value[i];
+      inc(j);
     end;
   end;
 
 end;
 
-class function c_XmlElement.Epacse(
-  const p_str: string
-): string;
-  function HexDigitToByte(
-    const p_chr: char
-  ): byte;
+class function c_xml_element.epacse(const p_value: string): string;
+  function HexDigitToByte(const p_chr: char): byte;
   begin
     if (p_chr in ['a'..'z']) then begin
       result := byte(p_chr) - ord('a') + ord(#$A);
@@ -522,42 +404,40 @@ class function c_XmlElement.Epacse(
     end;
   end;
 var
-  l_c: cardinal;
-  l_i: cardinal;
-  l_j: cardinal;
+  c: cardinal;
+  i: cardinal;
+  j: cardinal;
 begin
-  l_c := length(p_str);                                   
-  setlength(result, l_c);
-  l_i := 1;
-  l_j := 0;
-  while (l_i <= l_c) do begin
-    if ('%' = p_str[l_i]) then begin
-      inc(l_i);
-      if (l_i >= l_c) then begin
+  c := length(p_value);
+  setlength(result, c);
+  i := 1;
+  j := 0;
+  while (i <= c) do begin
+    if ('%' = p_value[i]) then begin
+      inc(i);
+      if (i >= c) then begin
         raise Exception.Create('Invalid hexidecimal digit.');
       end;
-      inc(l_j);
-      result[l_j] := char(HexDigitToByte(p_str[l_i]) * 16 + HexDigitToByte(
-          p_str[l_i + 1]));
-      inc(l_i, 2);
+      inc(j);
+      result[j] := char(HexDigitToByte(p_value[i]) * 16 + HexDigitToByte(p_value[i + 1]));
+      inc(i, 2);
     end else begin
-      inc(l_j);
-      result[l_j] := p_str[l_i];
-      inc(l_i);
+      inc(j);
+      result[j] := p_value[i];
+      inc(i);
     end;
   end;
-  setlength(result, l_j);
+  setlength(result, j);
 end;
 
-function c_XmlElement.AsString(
-): string;
+function c_xml_element.as_string(): string;
 var
   l_ms: TMemoryStream;
   l_cb: integer;
 begin
   l_ms := TMemoryStream.Create();
   try
-    SaveToStream(l_ms, '');
+    save_to_stream(l_ms, '');
     l_ms.Position := 0;
     l_cb := l_ms.Size;
     setlength(result, l_cb);
