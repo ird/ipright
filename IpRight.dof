@@ -60,7 +60,7 @@ IncludeVerInfo=1
 AutoIncBuild=0
 MajorVer=0
 MinorVer=9
-Release=8
+Release=9
 Build=0
 Debug=0
 PreRelease=0
@@ -72,7 +72,7 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=Independent Rapid Development Limited
 FileDescription=
-FileVersion=0.9.8.0
+FileVersion=0.9.9.0
 InternalName=
 LegalCopyright=
 LegalTrademarks=
